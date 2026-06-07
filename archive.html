@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprajita — Archive</title>
+
+  <link rel="stylesheet" href="cat-buddy.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'archive-bg': '#F2F1EC',
+            'archive-blue': '#1E63FF',
+          },
+        },
+      },
+    };
+  </script>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #F2F1EC; }
+    .canvas-16-9 {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      max-width: calc(100vh * 16 / 9);
+      max-height: 100vh;
+      margin: 0 auto;
+      background: #F2F1EC url('images/archive-background.jpg') no-repeat center center;
+      background-size: contain;
+    }
+    .back-link {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      background: #1E63FF;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 1500;
+      box-shadow: 0 4px 12px rgba(30, 99, 255, 0.25);
+      transition: transform 0.2s ease-out;
+    }
+    .back-link:hover { transform: translateX(-4px); }
+  </style>
+</head>
+<body class="bg-archive-bg">
+  <a href="about.html" class="back-link" aria-label="Go back to about">&larr;</a>
+
+  <div id="root" class="w-full h-full"></div>
+
+  <script type="text/babel" data-presets="react">
+    const { useEffect, useRef } = React;
+
+    // Hover-only parallax: card drifts toward cursor while mouse is over it,
+    // eases back to center on leave. Same behavior as the pill/polaroid on the about page.
+    function useHoverParallax(intensity = 14) {
+      const ref = useRef(null);
+      useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        let tx = 0, ty = 0, cx = 0, cy = 0, raf;
+
+        const onMove = (e) => {
+          const r = el.getBoundingClientRect();
+          const nx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+          const ny = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+          tx = nx * intensity;
+          ty = ny * intensity;
+        };
+        const onLeave = () => { tx = 0; ty = 0; };
+
+        el.addEventListener('mousemove', onMove);
+        el.addEventListener('mouseleave', onLeave);
+
+        const tick = () => {
+          cx += (tx - cx) * 0.12;
+          cy += (ty - cy) * 0.12;
+          // Preserve any base rotation set via CSS custom property.
+          const rot = el.dataset.rot || '0';
+          el.style.transform = `translate3d(${cx.toFixed(2)}px, ${cy.toFixed(2)}px, 0) rotate(${rot}deg)`;
+          raf = requestAnimationFrame(tick);
+        };
+        tick();
+        return () => {
+          cancelAnimationFrame(raf);
+          el.removeEventListener('mousemove', onMove);
+          el.removeEventListener('mouseleave', onLeave);
+        };
+      }, [intensity]);
+      return ref;
+    }
+
+    function ProjectCard({ src, alt, style, rotate = 0, href, external }) {
+      const ref = useHoverParallax(16);
+      return (
+        <a
+          ref={ref}
+          href={href || '#'}
+          target={external ? '_blank' : undefined}
+          rel={external ? 'noopener noreferrer' : undefined}
+          data-rot={rotate}
+          aria-label={alt}
+          className="absolute block will-change-transform"
+          style={{
+            ...style,
+            transform: `rotate(${rotate}deg)`,
+            transformOrigin: 'center center',
+          }}
+        >
+          <img src={src} alt={alt} className="w-full h-auto block pointer-events-none" />
+        </a>
+      );
+    }
+
+    function App() {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-archive-bg">
+          <div className="canvas-16-9">
+
+            {/* Vintage computer — click opens Calendly */}
+            <ProjectCard
+              src="images/archive-computer.png"
+              alt="Book a 30-min call on Calendly"
+              rotate={0}
+              href="https://calendly.com/aaprtpratimasingh/30min"
+              external
+              style={{ left: '39%', top: '21%', width: '38%' }}
+            />
+
+            {/* Flavour Fellow — opens case study PDF */}
+            <ProjectCard
+              src="images/card-flavour-fellow.png"
+              alt="Flavour Fellow case study"
+              rotate={-6}
+              href="pdfs/flavour-fellow-case-study.pdf"
+              external
+              style={{ left: '0.5%', top: '50%', width: '16%' }}
+            />
+
+            {/* Red String AI — opens case study PDF */}
+            <ProjectCard
+              src="images/card-red-string-ai.png"
+              alt="Red String AI case study"
+              rotate={4}
+              href="pdfs/red-string-ai-case-study.pdf"
+              external
+              style={{ left: '19%', top: '50%', width: '16%' }}
+            />
+
+            {/* RegenX — opens case study PDF */}
+            <ProjectCard
+              src="images/card-regenx.png"
+              alt="RegenX case study"
+              rotate={3}
+              href="pdfs/regenx-case-study.pdf"
+              external
+              style={{ left: '83%', top: '46%', width: '16%' }}
+            />
+
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+  <script src="cat-buddy.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprajita — About</title>
+  <link rel="stylesheet" href="about.css?v=59" />
+  <link rel="stylesheet" href="cat-buddy.css" />
+</head>
+<body>
+  <a href="index.html" class="back-link" aria-label="Go back to landing">&larr;</a>
+
+  <div class="scene">
+    <div class="canvas">
+      <img src="images/see-it-unfold.png" alt="" class="see-it-pill parallax-hover" />
+      <img src="images/polaroid.png" alt="" class="polaroid parallax-hover" />
+      <img src="images/cd.png" alt="" class="cd" />
+      <img src="images/turntable-arm.png" alt="" class="turntable-arm" />
+      <a href="archive.html" class="start-button">
+        <img src="images/start-button.png" alt="" />
+        <span>START</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="hover-tip" id="hoverTip" aria-hidden="true">Click to unfold me</div>
+
+  <div class="lightbox" id="unfoldLightbox" aria-hidden="true">
+    <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+    <img class="lightbox-media" id="lightboxMedia" alt="" />
+  </div>
+
+  <script src="about.js?v=6"></script>
+  <script src="cat-buddy.js"></script>
+</body>
+</html>

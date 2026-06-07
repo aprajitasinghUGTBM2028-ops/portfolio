@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="cat-buddy.css" />
+</head>
+<body>
+
+  <div class="portrait-container" onclick="window.location.href='about.html'">
+    <img class="portrait portrait-closed" src="images/portrait-closed.jpg" alt="" />
+    <img class="portrait portrait-open"   src="images/portrait-open.jpg"   alt="" />
+    <div class="nose-zone" id="noseZone"></div>
+  </div>
+
+  <div class="hover-tip" id="hoverTip" aria-hidden="true">Click me to discover more</div>
+
+  <script>
+    const preload = new Image();
+    preload.src = 'images/portrait-open.jpg';
+
+    // Tooltip only triggers when hovering the nose area.
+    (() => {
+      const tip = document.getElementById('hoverTip');
+      const nose = document.getElementById('noseZone');
+      const offsetX = 18, offsetY = 22;
+      nose.addEventListener('mouseenter', () => tip.classList.add('is-visible'));
+      nose.addEventListener('mouseleave', () => tip.classList.remove('is-visible'));
+      nose.addEventListener('mousemove', (e) => {
+        tip.style.transform = `translate3d(${e.clientX + offsetX}px, ${e.clientY + offsetY}px, 0)`;
+      });
+    })();
+  </script>
+  <script src="cat-buddy.js"></script>
+</body>
+</html>

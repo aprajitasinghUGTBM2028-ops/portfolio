@@ -1,0 +1,199 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #c6d9f6;
+}
+
+.scene {
+  width: 100%;
+  height: 100%;
+  background: #c6d9f6;
+  display: grid;
+  place-items: center;
+}
+
+/* 16:9 canvas that fits inside viewport like background:contain.
+   All overlays are positioned relative to THIS, not the viewport,
+   so they stay locked to the design regardless of viewport shape. */
+.canvas {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: auto;
+  max-width: calc(100vh * 16 / 9);
+  max-height: 100vh;
+  background: url('images/about-design.svg') no-repeat center center;
+  background-size: contain;
+  container-type: inline-size;
+}
+
+.see-it-pill {
+  position: absolute;
+  top: 10%;
+  left: 9%;
+  width: 11%;
+  height: auto;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  cursor: pointer;
+}
+
+.hover-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #1E63FF;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  padding: 10px 18px;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(30, 99, 255, 0.18);
+}
+
+.hover-tip.is-visible { opacity: 1; }
+
+.back-link {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #1E63FF;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  text-decoration: none;
+  z-index: 1500;
+  box-shadow: 0 4px 12px rgba(30, 99, 255, 0.25);
+  transition: transform 0.2s ease-out;
+}
+
+.back-link:hover {
+  transform: translateX(-4px);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 30, 60, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease-out;
+}
+
+.lightbox.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lightbox-media {
+  max-width: 86vw;
+  max-height: 86vh;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  background: #fff;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: none;
+  background: #fff;
+  color: #1E63FF;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.polaroid {
+  position: absolute;
+  top: 65%;
+  left: 8.7%;
+  width: 14%;
+  height: auto;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.turntable-arm {
+  position: absolute;
+  top: -96.53%;
+  right: -52.53%;
+  width: 125%;
+  height: auto;
+  pointer-events: none;
+}
+
+.start-button {
+  position: absolute;
+  bottom: 11%;
+  left: 56%;
+  width: 11%;
+  display: block;
+  text-decoration: none;
+}
+
+.start-button img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.start-button span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 1.4cqw;
+}
+
+.cd {
+  position: absolute;
+  top: 6%;
+  right: 14.7%;
+  width: 49%;
+  height: auto;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  transform-origin: 53.57% 55.31%;
+  animation: cd-spin 24s linear infinite;
+  will-change: transform;
+}
+
+@keyframes cd-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd { animation: none; }
+}
