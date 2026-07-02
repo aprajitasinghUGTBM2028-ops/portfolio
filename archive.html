@@ -25,7 +25,10 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #F2F1EC; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #F2F1EC; margin: 0; }
+    /* Critical layout — don't rely on Tailwind for these so the page never collapses */
+    #root { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #F2F1EC; }
+    #root > div { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
     .canvas-16-9 {
       position: relative;
       aspect-ratio: 16 / 9;
