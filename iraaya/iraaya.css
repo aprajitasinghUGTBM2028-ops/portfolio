@@ -1,0 +1,374 @@
+/* ==========================================================================
+   IRAAYA — waitlist
+   Boutique hangtag identity: warm linen ground, manga ink, tangelo flame,
+   a whisper of botticelli sky. Editorial, not centered-and-safe.
+   ========================================================================== */
+
+:root{
+  --paper:#F9E8D4;      /* linen ground            */
+  --paper-2:#F2DBBD;    /* deeper linen / panels   */
+  --ink:#1C130C;        /* warm near-black (manga) */
+  --ink-70:rgba(28,19,12,.70);
+  --ink-45:rgba(28,19,12,.45);
+  --ink-15:rgba(28,19,12,.15);
+  --flame:#D54C15;      /* tangelo accent          */
+  --flame-2:#B23C0E;
+  --sky:#8DB6C7;        /* botticelli secondary    */
+  --cream:#FFF4E7;      /* type on ink / flame     */
+  --hair:1.5px solid var(--ink);
+
+  --font-display:"Bricolage Grotesque",Georgia,serif;
+  --font-body:"Mulish",system-ui,-apple-system,sans-serif;
+  --font-mono:"DM Mono","SFMono-Regular",ui-monospace,monospace;
+
+  --wrap:1160px;
+}
+
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#1A1109;
+    --paper-2:#241811;
+    --ink:#F6E3CE;
+    --ink-70:rgba(246,227,206,.72);
+    --ink-45:rgba(246,227,206,.45);
+    --ink-15:rgba(246,227,206,.16);
+    --flame:#EF5E27;
+    --flame-2:#F5793F;
+    --sky:#9BC2D2;
+    --cream:#FFF4E7;
+    --hair:1.5px solid var(--ink);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1A1109;
+  --paper-2:#241811;
+  --ink:#F6E3CE;
+  --ink-70:rgba(246,227,206,.72);
+  --ink-45:rgba(246,227,206,.45);
+  --ink-15:rgba(246,227,206,.16);
+  --flame:#EF5E27;
+  --flame-2:#F5793F;
+  --sky:#9BC2D2;
+  --cream:#FFF4E7;
+  --hair:1.5px solid var(--ink);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  min-height:100svh;
+}
+::selection{background:var(--flame);color:var(--cream)}
+a{color:inherit}
+
+/* ---------- marquee -------------------------------------------------------- */
+.marquee{
+  background:var(--ink);
+  color:var(--paper);
+  border-bottom:var(--hair);
+  overflow:hidden;
+  white-space:nowrap;
+}
+.marquee__track{
+  display:inline-flex;
+  align-items:center;
+  gap:2.5rem;
+  padding:.55rem 0;
+  animation:marquee 26s linear infinite;
+  will-change:transform;
+}
+.marquee__track span{
+  font-family:var(--font-mono);
+  font-size:.8rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  display:inline-flex;
+  align-items:center;
+  gap:2.5rem;
+}
+.marquee__track b{color:var(--flame);font-weight:400}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ---------- header --------------------------------------------------------- */
+.head{
+  max-width:var(--wrap);
+  margin:0 auto;
+  padding:1.15rem clamp(1.1rem,4vw,2.4rem);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+}
+.logo-word{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:clamp(1.25rem,3.4vw,1.7rem);
+  letter-spacing:-.01em;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  gap:.5rem;
+}
+.logo-word .sun{
+  width:.72em;height:.72em;color:var(--flame);flex:none;
+}
+.head__right{display:flex;align-items:center;gap:1rem}
+.season{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ink-70);
+}
+.toggle{
+  appearance:none;
+  border:var(--hair);
+  background:transparent;
+  color:var(--ink);
+  width:2.3rem;height:2.3rem;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:.95rem;
+  display:grid;place-items:center;
+  transition:transform .25s ease,background .2s ease,color .2s ease;
+}
+.toggle:hover{transform:rotate(-18deg);background:var(--ink);color:var(--paper)}
+
+/* ---------- hero ----------------------------------------------------------- */
+.hero{
+  max-width:var(--wrap);
+  margin:0 auto;
+  padding:clamp(.5rem,2vw,1.5rem) clamp(1.1rem,4vw,2.4rem) clamp(2.5rem,6vw,4.5rem);
+  display:grid;
+  grid-template-columns:0.92fr 1.08fr;
+  align-items:center;
+  gap:clamp(1.5rem,4vw,3.5rem);
+  position:relative;
+}
+
+/* hanging tag ------------------------------------------------------------- */
+.stage{
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-self:start;
+  min-height:1px;
+}
+.drop{animation:drop 1.25s cubic-bezier(.3,1.12,.4,1) both}
+.pendulum{
+  transform-origin:50% 3%;
+  display:block;
+  animation:swing 4s 1s cubic-bezier(.36,0,.2,1) both,
+            sway 8s 5s ease-in-out infinite;
+  cursor:grab;
+}
+.pendulum:active{cursor:grabbing}
+.pendulum img,.pendulum svg.fallback{
+  display:block;
+  width:clamp(260px,34vw,440px);
+  height:auto;
+  filter:drop-shadow(0 22px 30px rgba(28,19,12,.22));
+}
+@keyframes drop{ 0%{transform:translateY(-128vh)} 100%{transform:translateY(0)} }
+@keyframes swing{
+  0%{transform:rotate(11deg)}
+  16%{transform:rotate(-8deg)}
+  33%{transform:rotate(5.6deg)}
+  50%{transform:rotate(-3.8deg)}
+  67%{transform:rotate(2.4deg)}
+  84%{transform:rotate(-1.3deg)}
+  100%{transform:rotate(0)}
+}
+@keyframes sway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+
+/* copy -------------------------------------------------------------------- */
+.copy{max-width:34rem}
+.ticket{
+  display:inline-flex;
+  align-items:center;
+  gap:.6rem;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--ink);
+  border:var(--hair);
+  border-radius:2px;
+  padding:.4rem .7rem .4rem 1.5rem;
+  position:relative;
+  background:var(--paper-2);
+}
+.ticket::before{ /* punched hole */
+  content:"";
+  position:absolute;left:.6rem;top:50%;transform:translateY(-50%);
+  width:.5rem;height:.5rem;border-radius:50%;
+  border:1.5px solid var(--ink);
+}
+.ticket .dot{width:.42rem;height:.42rem;border-radius:50%;background:var(--flame);flex:none}
+
+h1{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:clamp(2.9rem,8vw,5.1rem);
+  line-height:.98;
+  letter-spacing:-.025em;
+  margin:1.1rem 0 0;
+  text-wrap:balance;
+}
+h1 .mark{position:relative;color:var(--flame);white-space:nowrap}
+h1 .mark svg{
+  position:absolute;left:-2%;bottom:-.18em;width:104%;height:.4em;
+  overflow:visible;color:var(--flame);
+}
+h1 .mark path{
+  fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;
+  stroke-dasharray:340;stroke-dashoffset:340;
+  animation:draw 1s 1.6s cubic-bezier(.6,0,.3,1) forwards;
+}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+.lede{
+  margin-top:1.35rem;
+  font-size:clamp(1.02rem,1.6vw,1.18rem);
+  color:var(--ink-70);
+  max-width:32rem;
+  text-wrap:pretty;
+}
+
+/* form -------------------------------------------------------------------- */
+.form{
+  margin-top:1.9rem;
+  display:flex;
+  align-items:stretch;
+  border:var(--hair);
+  border-radius:4px;
+  background:var(--paper-2);
+  max-width:30rem;
+  overflow:hidden;
+  transition:box-shadow .2s ease;
+}
+.form:focus-within{box-shadow:0 0 0 3px var(--flame)}
+.form input{
+  flex:1;min-width:0;
+  border:none;background:transparent;
+  font-family:var(--font-body);font-size:1rem;font-weight:600;
+  color:var(--ink);
+  padding:.95rem 1.1rem;
+}
+.form input::placeholder{color:var(--ink-45);font-weight:500}
+.form input:focus{outline:none}
+.form button{
+  flex:none;
+  border:none;border-left:var(--hair);
+  background:var(--flame);color:var(--cream);
+  font-family:var(--font-display);font-weight:700;font-size:.98rem;
+  padding:0 1.4rem;cursor:pointer;
+  display:inline-flex;align-items:center;gap:.5rem;
+  transition:background .18s ease,gap .18s ease;
+}
+.form button:hover{background:var(--flame-2);gap:.75rem}
+.form button:focus-visible{outline:3px solid var(--sky);outline-offset:-3px}
+
+.caretags{
+  margin-top:1rem;
+  font-family:var(--font-mono);
+  font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-45);
+  display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;
+}
+.caretags .err{color:var(--flame);letter-spacing:.04em;text-transform:none;font-family:var(--font-body);font-weight:700;font-size:.85rem}
+
+/* success ----------------------------------------------------------------- */
+.done{
+  display:none;
+  margin-top:1.9rem;
+  border:var(--hair);
+  border-radius:4px;
+  background:var(--paper-2);
+  padding:1.4rem 1.5rem;
+  max-width:30rem;
+}
+.done.show{display:block;animation:pop .45s cubic-bezier(.2,1.25,.4,1) both}
+.done .badge{
+  font-family:var(--font-mono);font-size:.7rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--flame);
+}
+.done h2{font-family:var(--font-display);font-weight:800;font-size:1.5rem;margin:.35rem 0 .3rem;letter-spacing:-.01em}
+.done p{color:var(--ink-70);font-size:.95rem}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+
+/* ---------- perks (mini hangtags) ----------------------------------------- */
+.perks{
+  max-width:var(--wrap);
+  margin:0 auto;
+  padding:0 clamp(1.1rem,4vw,2.4rem) clamp(2.5rem,6vw,4rem);
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:clamp(.9rem,2vw,1.4rem);
+}
+.tagcard{
+  border:var(--hair);
+  border-radius:6px;
+  background:var(--paper-2);
+  padding:1.4rem 1.35rem 1.5rem;
+  position:relative;
+}
+.tagcard::before{ /* hole punch */
+  content:"";position:absolute;top:1.1rem;right:1.1rem;
+  width:.85rem;height:.85rem;border-radius:50%;
+  border:1.5px solid var(--ink);
+}
+.tagcard .no{
+  font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;
+  color:var(--flame);
+}
+.tagcard h3{
+  font-family:var(--font-display);font-weight:700;font-size:1.28rem;
+  letter-spacing:-.01em;margin:.7rem 0 .35rem;
+}
+.tagcard p{color:var(--ink-70);font-size:.92rem}
+
+/* ---------- footer (care label) ------------------------------------------- */
+.foot{
+  border-top:var(--hair);
+  background:var(--ink);
+  color:var(--paper);
+}
+.foot__in{
+  max-width:var(--wrap);margin:0 auto;
+  padding:1.1rem clamp(1.1rem,4vw,2.4rem);
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:.5rem 1.5rem;
+  font-family:var(--font-mono);
+  font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+}
+.foot__in b{color:var(--flame);font-weight:400}
+
+/* ---------- ambient ink stars --------------------------------------------- */
+.star-deco{position:absolute;color:var(--ink);pointer-events:none;z-index:-1}
+.star-deco.a{top:12%;right:6%;width:26px}
+.star-deco.b{bottom:8%;left:4%;width:20px;color:var(--flame)}
+
+/* ---------- responsive ---------------------------------------------------- */
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;text-align:left}
+  .stage{order:-1;margin-bottom:.5rem}
+  .copy{max-width:none}
+  .form,.done{max-width:none}
+  .perks{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .season{display:none}
+  .pendulum img,.pendulum svg.fallback{width:min(74vw,320px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .marquee__track{animation:none}
+  .drop,.pendulum{animation:none}
+  h1 .mark path{stroke-dashoffset:0;animation:none}
+}
