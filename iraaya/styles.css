@@ -60,10 +60,10 @@ a{ color:inherit; text-decoration:none; }
 /* ---------- Context: scroll word reveal --------------------------------- */
 .context{ display:flex; justify-content:center; padding:clamp(60px,16vh,150px) 26px; }
 .reveal-text{
-  font-weight:600; font-size:clamp(1.5rem,4.2vw,2.8rem); line-height:1.32; letter-spacing:-.015em;
-  max-width:22ch; margin:0; text-align:center;
+  font-weight:700; font-size:clamp(1.7rem,4.6vw,3rem); line-height:1.28; letter-spacing:-.02em;
+  max-width:20ch; margin:0; text-align:center; color:var(--ink);
 }
-.reveal-text .w{ opacity:.14; }
+.reveal-text .w{ opacity:.3; transition:opacity .15s linear; }
 
 /* ---------- Lookbook: sticky scroll stack ------------------------------- */
 .look__head{ text-align:center; padding:0 22px; }
@@ -78,30 +78,47 @@ a{ color:inherit; text-decoration:none; }
 .pcard:hover .pcard__img{ transform:scale(1.04); }
 .pcard__pixel{ position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none; }
 .pcard:hover .pcard__pixel{ animation:pxflash .55s ease-out; }
-.pcard__tag{
-  position:absolute; top:12px; left:12px; z-index:3; background:var(--orange); color:var(--ink);
-  font-weight:700; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; padding:5px 10px; border-radius:5px;
-}
 
-/* email CTA — frosted pill on the polaroid */
+/* email CTA — sleek frosted pill, centred on the polaroid */
 .pcta{
-  position:absolute; left:12px; right:12px; bottom:12px; z-index:3;
-  display:flex; align-items:center; gap:6px;
-  background:rgba(255,253,247,.72); backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.65); border-radius:999px;
-  padding:5px 5px 5px 16px; box-shadow:0 10px 24px -10px rgba(23,20,15,.5);
+  position:absolute; left:50%; transform:translateX(-50%); bottom:14px; z-index:3;
+  width:min(84%,242px); display:flex; align-items:center; gap:5px;
+  background:rgba(255,253,247,.74); backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.7); border-radius:999px;
+  padding:4px 4px 4px 15px; box-shadow:0 12px 26px -12px rgba(23,20,15,.55);
   transition:box-shadow .2s ease;
 }
 .pcta.err{ box-shadow:0 0 0 2px #d24; }
-.pcta input{ flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:.9rem; color:var(--ink); outline:none; }
+.pcta input{ flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:.84rem; color:var(--ink); outline:none; }
 .pcta input::placeholder{ color:#7d7f8c; }
 .pcta button{
-  flex:none; width:38px; height:38px; border:0; border-radius:50%; cursor:pointer;
-  background:var(--ink); color:var(--paper); font-size:1.15rem; line-height:1;
+  flex:none; width:32px; height:32px; border:0; border-radius:50%; cursor:pointer;
+  background:var(--ink); color:var(--paper); font-size:1rem; line-height:1;
   display:grid; place-items:center; transition:background .2s ease, transform .2s ease;
 }
-.pcta button:hover{ background:var(--orange); color:var(--ink); transform:scale(1.08); }
-.pcta__done{ width:100%; text-align:center; font-weight:600; color:var(--orange-2); font-size:.92rem; padding:9px 0; }
+.pcta button:hover{ background:var(--orange); color:var(--ink); transform:scale(1.1); }
+.pcta__done{ width:100%; text-align:center; font-weight:600; color:var(--orange-2); font-size:.86rem; padding:8px 0; }
+
+/* ---------- Atmosphere (grain · glow · drifting sparkles) ---------------- */
+.grain{
+  position:fixed; inset:0; z-index:100; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.hero__glow{
+  position:absolute; top:-8%; left:50%; transform:translateX(-50%); z-index:0; pointer-events:none;
+  width:min(760px,92vw); height:600px;
+  background:radial-gradient(closest-side, rgba(228,99,28,.22), rgba(228,99,28,0));
+}
+.hero > *:not(.hero__glow):not(.spark){ position:relative; z-index:1; }
+.spark{
+  position:absolute; z-index:0; color:var(--ink); opacity:.35; pointer-events:none; user-select:none;
+  animation:twinkle 5s ease-in-out infinite, floaty 9s ease-in-out infinite;
+}
+.spark.s1{ top:16%; left:13%; font-size:1rem; }
+.spark.s2{ top:26%; right:14%; font-size:1.3rem; animation-delay:.8s,1.2s; }
+.spark.s3{ top:58%; left:9%;  font-size:1.2rem; color:var(--orange-2); animation-delay:1.6s,.4s; }
+.spark.s4{ top:70%; right:11%; font-size:.9rem; animation-delay:2.2s,2s; }
+.spark.s5{ top:44%; right:22%; font-size:.8rem; color:var(--orange-2); animation-delay:.4s,3s; }
 
 /* ---------- Footer (minimal — pending your direction) ------------------- */
 .foot{
@@ -123,10 +140,13 @@ a{ color:inherit; text-decoration:none; }
 }
 @keyframes sway{ 0%,100%{ transform:rotate(-9.4deg) } 50%{ transform:rotate(-6.6deg) } }
 @keyframes pxflash{ 0%{ opacity:0 } 22%{ opacity:.9 } 100%{ opacity:0 } }
+@keyframes twinkle{ 0%,100%{ opacity:.18; transform:scale(.8) rotate(0) } 50%{ opacity:.6; transform:scale(1.15) rotate(20deg) } }
+@keyframes floaty{ 0%,100%{ translate:0 0 } 50%{ translate:0 -16px } }
 
 @media (max-width:560px){ .hdr__nav .nav-link{ display:none; } }
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
   .pendulum{ animation:none; transform:rotate(-8deg); }
   .reveal-text .w{ opacity:1 !important; }
+  .spark{ animation:none; }
 }
