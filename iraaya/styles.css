@@ -51,23 +51,24 @@ a{ color:inherit; text-decoration:none; }
 .hero{
   position:relative; min-height:100svh; overflow:hidden;
   display:flex; flex-direction:column; align-items:center;
-  padding:56px 22px clamp(28px,5vh,56px);
+  padding:6px 22px clamp(24px,4vh,48px);
 }
-/* .hang recenters the tilted logo; .drop falls in; .pendulum swings from the thread */
-.hang{ display:inline-block; transform:translateX(-9%); }
-.drop{ margin-top:clamp(2px,1vh,12px); animation:drop 1.4s .12s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
+/* .hang shifts the logo so the squiggle's free end sits at top-centre (the ceiling);
+   .drop falls in; .pendulum hangs & swings from that thread-end */
+.hang{ display:inline-block; transform:translateX(-15%); }
+.drop{ margin-top:0; animation:drop 1.4s .12s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
-  transform-origin:72% 4%;              /* the squiggle-thread that is part of the logo */
+  transform-origin:78% 2%;              /* the free end of the squiggle-thread in the logo */
   display:inline-block; width:fit-content;
   cursor:grab; -webkit-tap-highlight-color:transparent;
-  animation:swing 3.8s 1.4s cubic-bezier(.36,0,.2,1) both,
-            sway 7s 5s ease-in-out infinite;
+  animation:swing 4s 1.4s cubic-bezier(.36,0,.2,1) both,
+            sway 7.5s 5.2s ease-in-out infinite;
   will-change:transform;
 }
 .pendulum:active{ cursor:grabbing; }
-.tag{ width:clamp(300px,40vw,470px); height:auto; user-select:none; -webkit-user-drag:none; }
+.tag{ width:clamp(360px,48vw,580px); height:auto; user-select:none; -webkit-user-drag:none; }
 
-.hero__copy{ text-align:center; margin-top:clamp(12px,2.2vh,26px); max-width:640px; }
+.hero__copy{ text-align:center; margin-top:clamp(96px,15vh,150px); max-width:640px; }
 .hero__copy .eyebrow{ display:inline-block; margin-bottom:14px; }
 .display{
   font-family:var(--f-disp); font-weight:800;
@@ -75,7 +76,8 @@ a{ color:inherit; text-decoration:none; }
   margin:0; text-wrap:balance; color:var(--ink);
 }
 .display em{ font-family:var(--f-serif); font-style:italic; font-weight:400; letter-spacing:0; color:var(--orange); }
-.lede{ margin:15px auto 0; max-width:42ch; color:var(--ink-2); font-size:1.04rem; line-height:1.6; }
+.lede{ margin:15px auto 0; max-width:44ch; color:var(--ink-2); font-size:1.08rem; line-height:1.6; }
+.lede em{ font-family:var(--f-serif); font-style:italic; font-size:1.18em; color:var(--ink); }
 
 /* waitlist */
 .join{ display:flex; gap:8px; justify-content:center; margin:20px auto 0; max-width:430px; }
@@ -119,18 +121,18 @@ a{ color:inherit; text-decoration:none; }
   91%{ transform:translateY(-9px) }
   100%{ transform:translateY(0) }
 }
-/* settles to ~-13deg — a believable resting hang from the thread */
+/* settles to ~-16deg — reads as a hanging tag without swinging a star-point off-screen */
 @keyframes swing{
-  0%{ transform:rotate(3deg) }
-  14%{ transform:rotate(-25deg) }
-  30%{ transform:rotate(-4deg) }
-  46%{ transform:rotate(-19deg) }
-  62%{ transform:rotate(-8deg) }
-  78%{ transform:rotate(-15deg) }
-  90%{ transform:rotate(-11.5deg) }
-  100%{ transform:rotate(-13deg) }
+  0%{ transform:rotate(0deg) }
+  14%{ transform:rotate(-28deg) }
+  30%{ transform:rotate(-7deg) }
+  46%{ transform:rotate(-22deg) }
+  62%{ transform:rotate(-11deg) }
+  78%{ transform:rotate(-18deg) }
+  90%{ transform:rotate(-14.5deg) }
+  100%{ transform:rotate(-16deg) }
 }
-@keyframes sway{ 0%,100%{ transform:rotate(-14.3deg) } 50%{ transform:rotate(-11.7deg) } }
+@keyframes sway{ 0%,100%{ transform:rotate(-17.4deg) } 50%{ transform:rotate(-14.6deg) } }
 
 @media (max-width:560px){
   .join{ flex-direction:column; }
@@ -138,5 +140,5 @@ a{ color:inherit; text-decoration:none; }
 }
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
-  .pendulum{ animation:none; transform:rotate(-13deg); }  /* still hangs at its natural angle */
+  .pendulum{ animation:none; transform:rotate(-16deg); }  /* still hangs at its natural angle */
 }
