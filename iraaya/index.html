@@ -15,7 +15,7 @@
 <!-- NAV -->
 <header class="nav" id="nav">
   <a class="nav__brand" href="#top">
-    <img src="assets/logo.png" alt="Iraaya logo" />
+    <img src="assets/logo-mark.png" alt="Iraaya logo" />
     <span>IRAAYA</span>
   </a>
   <nav class="nav__links" id="navLinks">
@@ -30,17 +30,23 @@
 
 <!-- HERO -->
 <section class="hero" id="top">
-  <span class="spark s1">✦</span><span class="spark s2">✦</span>
-  <span class="spark s3">✦</span><span class="spark s4">✦</span>
-  <div class="wrap">
-    <img class="hero__logo" src="assets/logo.png" alt="Iraaya — twin sunburst logo" />
-    <h1>IRAAYA</h1>
+  <div class="drop">
+    <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
+      <span class="pin"></span>
+      <span class="string"></span>
+      <img class="tag" src="assets/logo-tag.png" alt="IRAAYA — for all that, you are" draggable="false" />
+    </div>
+  </div>
+  <div class="hero__copy">
+    <h1 class="sr-only">IRAAYA</h1>
+    <span class="eyebrow hero__eyebrow">Y2K editorial label</span>
     <p class="hero__tag">For all that, you are.</p>
-    <p class="hero__sub">A Y2K editorial label for the loud, the nostalgic and the unapologetically <em>you</em>. Clothes that refuse to blend in — because life is too short to wear boring.</p>
+    <p class="hero__sub">Clothes that refuse to blend in — for the loud, the nostalgic and the unapologetically you.</p>
     <div class="hero__cta">
-      <a class="btn btn--solid" href="#lookbook">See the lookbook</a>
+      <a class="btn btn--solid" href="#lookbook">Enter the lookbook</a>
       <a class="btn btn--ghost" href="#story">Our story</a>
     </div>
+    <span class="hero__hint">psst — tap the tag</span>
   </div>
 </section>
 
@@ -150,7 +156,7 @@
   <div class="wrap">
     <div class="footer__top">
       <div class="footer__brand">
-        <img src="assets/logo.png" alt="Iraaya logo" />
+        <img src="assets/logo-mark.png" alt="Iraaya logo" />
         <p>For all that, you are.</p>
       </div>
       <div class="footer__cols">
@@ -187,6 +193,15 @@
   document.getElementById('navLinks').addEventListener('click', e => {
     if (e.target.tagName === 'A') nav.classList.remove('open');
   });
+
+  // tap the tag to swing it again
+  const pend = document.getElementById('pendulum');
+  function reSwing(){
+    pend.style.animation = 'none';
+    void pend.offsetWidth;               // force reflow
+    pend.style.animation = 'swing 3.2s cubic-bezier(.36,0,.2,1) both, sway 7s 3.2s ease-in-out infinite';
+  }
+  pend.addEventListener('click', reSwing);
 
   // reveal on scroll
   const io = new IntersectionObserver((entries) => {
