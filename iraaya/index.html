@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IRAAYA — For all that, you are</title>
-<meta name="description" content="IRAAYA — coming soon. Join the list." />
+<meta name="description" content="IRAAYA — a new fashion house. Launching 2026. Join the list." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,7 +12,16 @@
 </head>
 <body>
 
-<!-- HERO — the logo hangs from the very top -->
+<!-- HEADER -->
+<header class="hdr" id="hdr">
+  <a class="hdr__brand" href="#top"><img src="assets/logo-mark.png" alt="" /> IRAAYA</a>
+  <nav class="hdr__nav">
+    <a class="nav-link" href="#lookbook">Lookbook</a>
+    <a class="btn" href="#lookbook">Join the list</a>
+  </nav>
+</header>
+
+<!-- HERO — the logo hangs from the top -->
 <main class="hero" id="top">
   <div class="hang">
     <div class="drop">
@@ -22,34 +31,63 @@
     </div>
   </div>
   <h1 class="sr-only">IRAAYA</h1>
-  <span class="eyebrow hero__meta">Coming soon · 2026</span>
+  <p class="hero__status">Launching 2026</p>
+  <a class="btn hero__cta" href="#lookbook">Join the waitlist</a>
 </main>
 
-<!-- SCROLL-DRIVEN STICKY CARD STACK -->
-<section class="stack" id="join">
-  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/y2k.png" alt="Y2K look" loading="lazy" /></figure></div>
-  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/dayout.png" alt="Day-out look" loading="lazy" /></figure></div>
-  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/office.png" alt="Office look" loading="lazy" /></figure></div>
-  <div class="scard">
-    <div class="pcard pcard--cta">
-      <img class="pcard__img" src="assets/office2.png" alt="After-hours look" loading="lazy" />
-      <form class="pform" id="joinForm" novalidate>
-        <input type="email" id="joinEmail" name="email" placeholder="you@iraaya.club" required aria-label="Email address" />
-        <button type="submit">Join the list</button>
-      </form>
-      <p class="pform__note" id="joinNote">One note when we open.</p>
-    </div>
+<!-- CONTEXT — scroll-scrubbed word reveal (placeholder copy — edit freely) -->
+<section class="context">
+  <p class="reveal-text" data-reveal>IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
+</section>
+
+<!-- LOOKBOOK — scroll-driven sticky card stack, CTA on every card -->
+<section class="lookbook" id="lookbook">
+  <div class="look__head">
+    <span class="eyebrow">The lookbook</span>
+    <h2>A preview, coming soon</h2>
+  </div>
+  <div class="stack">
+    <div class="scard"><figure class="pcard">
+      <div class="pcard__media">
+        <img class="pcard__img" src="assets/y2k.png" alt="Y2K look" loading="lazy" />
+        <canvas class="pcard__pixel" aria-hidden="true"></canvas>
+        <span class="pcard__tag">Y2K</span>
+        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+      </div>
+    </figure></div>
+    <div class="scard"><figure class="pcard">
+      <div class="pcard__media">
+        <img class="pcard__img" src="assets/dayout.png" alt="Day-out look" loading="lazy" />
+        <canvas class="pcard__pixel" aria-hidden="true"></canvas>
+        <span class="pcard__tag">Day out</span>
+        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+      </div>
+    </figure></div>
+    <div class="scard"><figure class="pcard">
+      <div class="pcard__media">
+        <img class="pcard__img" src="assets/office.png" alt="Office look" loading="lazy" />
+        <canvas class="pcard__pixel" aria-hidden="true"></canvas>
+        <span class="pcard__tag">Office</span>
+        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+      </div>
+    </figure></div>
   </div>
 </section>
 
+<!-- FOOTER — minimal for now (per your note) -->
 <footer class="foot">
   <span>© <span id="year"></span> IRAAYA</span>
+  <span>Launching 2026</span>
 </footer>
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // tap the tag to replay the drop from the top
+  // header backdrop on scroll
+  const hdr = document.getElementById('hdr');
+  addEventListener('scroll', () => hdr.classList.toggle('scrolled', scrollY > 12), { passive:true });
+
+  // tap the tag to replay the drop
   const drop = document.querySelector('.drop');
   const pend = document.getElementById('pendulum');
   pend.addEventListener('click', () => {
@@ -59,47 +97,82 @@
     pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
   });
 
-  // scroll-driven sticky card stack (vanilla — works on iOS; no libraries)
+  // ---- scroll-scrubbed word reveal (Text-Reveal-on-Scroll, vanilla) ----
+  document.querySelectorAll('[data-reveal]').forEach(el => {
+    el.innerHTML = el.textContent.trim().split(/\s+/)
+      .map(w => `<span class="w">${w} </span>`).join('');
+  });
+  const words = [...document.querySelectorAll('[data-reveal] .w')];
+  function revealTick(){
+    const vh = innerHeight, top = vh*0.82, bot = vh*0.34;
+    for (const w of words){
+      const y = w.getBoundingClientRect().top;
+      const p = Math.min(Math.max((top - y)/(top - bot), 0), 1);
+      w.style.opacity = (0.14 + 0.86*p).toFixed(3);
+    }
+  }
+
+  // ---- scroll-driven sticky card stack (vanilla; iOS-safe) ----
   const stack = document.querySelector('.stack');
   const cards = [...document.querySelectorAll('.stack .pcard')];
   const n = cards.length;
-  let ticking = false;
-  function update(){
-    const total = stack.offsetHeight - window.innerHeight;
+  function stackTick(){
+    const total = stack.offsetHeight - innerHeight;
     const passed = Math.min(Math.max(-stack.getBoundingClientRect().top, 0), Math.max(total, 1));
-    const p = total > 0 ? passed / total : 0;
+    const p = total > 0 ? passed/total : 0;
     for (let i = 0; i < n; i++){
-      const start = i / n;
-      const lp = Math.min(Math.max((p - start) / (1 - start || 1), 0), 1);
-      const target = Math.max(0.78, 1 - (n - 1 - i) * 0.07);
-      cards[i].style.transform = `scale(${(1 + (target - 1) * lp).toFixed(4)})`;
+      const start = i/n;
+      const lp = Math.min(Math.max((p - start)/(1 - start || 1), 0), 1);
+      const target = Math.max(0.8, 1 - (n - 1 - i)*0.06);
+      cards[i].style.transform = `scale(${(1 + (target - 1)*lp).toFixed(4)})`;
     }
-    ticking = false;
   }
-  addEventListener('scroll', () => { if (!ticking){ requestAnimationFrame(update); ticking = true; } }, { passive:true });
-  addEventListener('resize', update);
-  update();
 
-  // waitlist (demo: validates + remembers locally; wire to a real endpoint later)
-  const form = document.getElementById('joinForm');
-  const email = document.getElementById('joinEmail');
-  const note = document.getElementById('joinNote');
+  let ticking = false;
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { revealTick(); stackTick(); ticking = false; }); ticking = true; } }
+  addEventListener('scroll', onScroll, { passive:true });
+  addEventListener('resize', () => { revealTick(); stackTick(); drawAllPixels(); });
+  revealTick(); stackTick();
+
+  // ---- pixel-flash on hover (Pixel-Hover-Card, vanilla canvas) ----
+  function drawPixel(card){
+    const img = card.querySelector('.pcard__img');
+    const cv = card.querySelector('.pcard__pixel');
+    if (!img.complete || !img.naturalWidth) return;
+    const w = img.clientWidth, h = img.clientHeight;
+    if (!w || !h) return;
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const block = 16;
+    const bw = Math.max(1, Math.round(w/block)), bh = Math.max(1, Math.round(h/block));
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, bw, bh);
+    ctx.drawImage(cv, 0, 0, bw, bh, 0, 0, w, h);
+  }
+  function drawAllPixels(){ cards.forEach(drawPixel); }
+  cards.forEach(card => {
+    const img = card.querySelector('.pcard__img');
+    if (img.complete && img.naturalWidth) drawPixel(card);
+    else img.addEventListener('load', () => drawPixel(card));
+  });
+
+  // ---- waitlist on every card CTA (demo — remembers locally) ----
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  try {
-    if (localStorage.getItem('iraaya-joined')) {
-      note.textContent = "You're on the list ✦"; note.className = 'pform__note is-good';
-      form.querySelector('button').textContent = 'Joined ✓';
-    }
-  } catch (e) {}
-  form.addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    const v = email.value.trim();
-    if (!valid.test(v)) {
-      note.textContent = 'Check that email?'; note.className = 'pform__note is-err'; email.focus(); return;
-    }
-    try { localStorage.setItem('iraaya-joined', v); } catch (e) {}
-    note.textContent = "You're on the list ✦"; note.className = 'pform__note is-good';
-    form.reset(); form.querySelector('button').textContent = 'Joined ✓';
+  function joinedAll(){
+    document.querySelectorAll('.pcta').forEach(p => {
+      p.innerHTML = '<span class="pcta__done">You’re on the list ✦</span>';
+    });
+  }
+  try { if (localStorage.getItem('iraaya-joined')) joinedAll(); } catch (e) {}
+  document.querySelectorAll('.pcta').forEach(form => {
+    form.addEventListener('submit', ev => {
+      ev.preventDefault();
+      const input = form.querySelector('input'); const v = input.value.trim();
+      if (!valid.test(v)){ input.focus(); form.classList.add('err'); setTimeout(() => form.classList.remove('err'), 1000); return; }
+      try { localStorage.setItem('iraaya-joined', v); } catch (e) {}
+      joinedAll();
+    });
   });
 </script>
 </body>

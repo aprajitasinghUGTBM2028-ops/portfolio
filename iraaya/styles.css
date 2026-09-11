@@ -1,93 +1,114 @@
 /* ==========================================================================
-   IRAAYA — teaser landing. Periwinkle blue · tangelo · ink.
-   Type: Schibsted Grotesk. Playfulness lives in the logo, colour & polaroids.
+   IRAAYA — creative coming-soon teaser. Periwinkle blue · tangelo · ink.
+   Type: Schibsted Grotesk. Refs: creative/editorial Framer + Readymag sites —
+   smooth, professional, animation-led (not a product page yet).
    ========================================================================== */
 
 :root{
-  --bg:#BFD3F0;          /* periwinkle brand blue */
-  --bg-2:#AEC6EC;
-  --paper:#FFFDF7;       /* polaroid white */
-  --ink:#17140F;
-  --ink-2:#43506a;
-  --orange:#E4631C;
-  --orange-2:#BF4D12;
+  --bg:#BFD3F0; --bg-2:#AEC6EC; --paper:#FFFDF7;
+  --ink:#17140F; --ink-2:#43506a;
+  --orange:#E4631C; --orange-2:#BF4D12;
   --line:rgba(23,20,15,.16);
-
-  --logoW:clamp(330px,46vw,560px);
+  --logoW:clamp(300px,42vw,520px);
   --f:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
-body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font-family:var(--f); -webkit-font-smoothing:antialiased; overflow-x:hidden;
-}
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--f); -webkit-font-smoothing:antialiased; overflow-x:hidden; }
 img{ max-width:100%; display:block; }
 a{ color:inherit; text-decoration:none; }
-.eyebrow{ text-transform:uppercase; letter-spacing:.28em; font-size:.74rem; font-weight:600; color:var(--orange-2); }
 .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+.eyebrow{ text-transform:uppercase; letter-spacing:.26em; font-size:.74rem; font-weight:600; color:var(--orange-2); }
 
-/* ---------- Hero: the logo hangs from the very top edge ------------------ */
+/* ---------- Header ------------------------------------------------------- */
+.hdr{
+  position:fixed; top:0; left:0; right:0; z-index:30;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px clamp(16px,4vw,40px); transition:background .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
+}
+.hdr.scrolled{ background:rgba(191,211,240,.86); backdrop-filter:blur(10px); box-shadow:0 1px 0 var(--line); }
+.hdr__brand{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:1.02rem; letter-spacing:.03em; }
+.hdr__brand img{ width:24px; height:24px; object-fit:contain; }
+.hdr__nav{ display:flex; align-items:center; gap:clamp(14px,2.4vw,26px); }
+.hdr__nav .nav-link{ font-weight:500; font-size:.88rem; }
+.hdr__nav .nav-link:hover{ color:var(--orange-2); }
+.btn{
+  font-weight:600; font-size:.82rem; background:var(--ink); color:var(--paper);
+  padding:9px 17px; border-radius:999px; border:1.5px solid var(--ink);
+  transition:background .2s ease, border-color .2s ease, transform .2s ease; cursor:pointer;
+}
+.btn:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
+
+/* ---------- Hero: logo hangs from the top ------------------------------- */
 .hero{
-  position:relative; overflow:hidden;
-  display:flex; flex-direction:column; align-items:center;
-  padding:6px 22px 0;
+  position:relative; overflow:hidden; text-align:center;
+  display:flex; flex-direction:column; align-items:center; padding:4px 22px clamp(30px,5vh,54px);
 }
 .hang{ display:inline-block; transform:translateX(-8%); }
 .drop{ margin-top:0; animation:drop 1.4s .1s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
-  transform-origin:78% 2%;              /* the squiggle-thread built into the logo */
-  display:inline-block; width:fit-content;
+  transform-origin:78% 2%; display:inline-block; width:fit-content;
   cursor:grab; -webkit-tap-highlight-color:transparent;
-  animation:swing 4s 1.3s cubic-bezier(.36,0,.2,1) both,
-            sway 7.5s 5s ease-in-out infinite;
+  animation:swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite;
   will-change:transform;
 }
 .pendulum:active{ cursor:grabbing; }
 .tag{ width:var(--logoW); height:auto; user-select:none; -webkit-user-drag:none; }
-.hero__meta{ display:inline-block; margin-top:calc(var(--logoW) * .12); }
+.hero__status{ margin:calc(var(--logoW) * .1) 0 0; color:var(--orange-2); letter-spacing:.24em; text-transform:uppercase; font-size:.78rem; font-weight:600; }
+.hero__cta{ margin-top:20px; font-size:.92rem; padding:13px 26px; }
 
-/* ---------- Scroll-driven sticky card stack ----------------------------- */
-.stack{ position:relative; padding:8vh 22px 30vh; }
-.scard{
-  position:sticky; top:0; height:88vh;
-  display:flex; align-items:center; justify-content:center;
+/* ---------- Context: scroll word reveal --------------------------------- */
+.context{ display:flex; justify-content:center; padding:clamp(60px,16vh,150px) 26px; }
+.reveal-text{
+  font-weight:600; font-size:clamp(1.5rem,4.2vw,2.8rem); line-height:1.32; letter-spacing:-.015em;
+  max-width:22ch; margin:0; text-align:center;
 }
-.pcard{
-  width:min(340px,82vw); background:var(--paper);
-  padding:14px 14px 16px; border-radius:6px;
-  box-shadow:0 26px 46px -22px rgba(23,20,15,.55);
-  transform-origin:center top; will-change:transform;
-}
-.pcard__img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:3px; background:var(--bg-2); display:block; }
+.reveal-text .w{ opacity:.14; }
 
-/* the final card carries the signup in its strip */
-.pcard--cta .pcard__img{ aspect-ratio:3/2.3; }
-.pform{ display:flex; flex-direction:column; gap:8px; padding:14px 4px 4px; }
-.pform input{
-  width:100%; padding:13px 15px; border:1.5px solid var(--ink); border-radius:9px;
-  background:#fff; color:var(--ink); font-family:var(--f); font-size:1rem;
-}
-.pform input::placeholder{ color:#9a9aa5; }
-.pform input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); }
-.pform button{
-  width:100%; padding:13px 16px; border:1.5px solid var(--ink); border-radius:9px;
-  background:var(--ink); color:var(--paper); font-family:var(--f); font-weight:600; font-size:1rem;
-  cursor:pointer; transition:background .2s ease, transform .2s ease, border-color .2s ease;
-}
-.pform button:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
-.pform__note{ margin:4px 2px 0; font-size:.8rem; color:var(--ink-2); text-align:center; transition:color .2s ease; }
-.pform__note.is-good{ color:var(--orange-2); font-weight:600; }
-.pform__note.is-err{ color:#b23b2e; }
+/* ---------- Lookbook: sticky scroll stack ------------------------------- */
+.look__head{ text-align:center; padding:0 22px; }
+.look__head h2{ font-weight:700; font-size:clamp(1.7rem,4.6vw,2.7rem); letter-spacing:-.02em; margin:.3em 0 0; }
+.stack{ position:relative; padding:5vh 22px 24vh; }
+.scard{ position:sticky; top:0; height:86vh; display:flex; align-items:center; justify-content:center; }
 
-/* ---------- Footer ------------------------------------------------------- */
+/* the poster IS the polaroid — no extra frame */
+.pcard{ width:min(330px,82vw); transform-origin:center top; will-change:transform; }
+.pcard__media{ position:relative; border-radius:8px; overflow:hidden; box-shadow:0 30px 50px -24px rgba(23,20,15,.6); }
+.pcard__img{ width:100%; height:auto; display:block; transition:transform .55s cubic-bezier(.2,.8,.2,1); }
+.pcard:hover .pcard__img{ transform:scale(1.04); }
+.pcard__pixel{ position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none; }
+.pcard:hover .pcard__pixel{ animation:pxflash .55s ease-out; }
+.pcard__tag{
+  position:absolute; top:12px; left:12px; z-index:3; background:var(--orange); color:var(--ink);
+  font-weight:700; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; padding:5px 10px; border-radius:5px;
+}
+
+/* email CTA — frosted pill on the polaroid */
+.pcta{
+  position:absolute; left:12px; right:12px; bottom:12px; z-index:3;
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,253,247,.72); backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.65); border-radius:999px;
+  padding:5px 5px 5px 16px; box-shadow:0 10px 24px -10px rgba(23,20,15,.5);
+  transition:box-shadow .2s ease;
+}
+.pcta.err{ box-shadow:0 0 0 2px #d24; }
+.pcta input{ flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:.9rem; color:var(--ink); outline:none; }
+.pcta input::placeholder{ color:#7d7f8c; }
+.pcta button{
+  flex:none; width:38px; height:38px; border:0; border-radius:50%; cursor:pointer;
+  background:var(--ink); color:var(--paper); font-size:1.15rem; line-height:1;
+  display:grid; place-items:center; transition:background .2s ease, transform .2s ease;
+}
+.pcta button:hover{ background:var(--orange); color:var(--ink); transform:scale(1.08); }
+.pcta__done{ width:100%; text-align:center; font-weight:600; color:var(--orange-2); font-size:.92rem; padding:9px 0; }
+
+/* ---------- Footer (minimal — pending your direction) ------------------- */
 .foot{
   display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
   padding:18px clamp(18px,4vw,40px); border-top:1px solid var(--line);
   font-size:.78rem; color:var(--ink-2);
 }
-.foot__hint{ letter-spacing:.12em; text-transform:uppercase; font-size:.7rem; }
 
 /* ---------- Motion ------------------------------------------------------- */
 @keyframes drop{
@@ -95,15 +116,17 @@ a{ color:inherit; text-decoration:none; }
   68%{ transform:translateY(-24px) } 82%{ transform:translateY(0) }
   91%{ transform:translateY(-8px) } 100%{ transform:translateY(0) }
 }
-/* settles ~-8deg — hangs from the top without swinging a point off-screen */
 @keyframes swing{
   0%{ transform:rotate(4deg) } 16%{ transform:rotate(-18deg) } 34%{ transform:rotate(-2deg) }
   52%{ transform:rotate(-12deg) } 70%{ transform:rotate(-5deg) } 86%{ transform:rotate(-9.5deg) }
   100%{ transform:rotate(-8deg) }
 }
 @keyframes sway{ 0%,100%{ transform:rotate(-9.4deg) } 50%{ transform:rotate(-6.6deg) } }
+@keyframes pxflash{ 0%{ opacity:0 } 22%{ opacity:.9 } 100%{ opacity:0 } }
 
+@media (max-width:560px){ .hdr__nav .nav-link{ display:none; } }
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
   .pendulum{ animation:none; transform:rotate(-8deg); }
+  .reveal-text .w{ opacity:1 !important; }
 }
