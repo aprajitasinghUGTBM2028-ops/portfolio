@@ -1,6 +1,6 @@
 /* ==========================================================================
-   IRAAYA — teaser landing. Periwinkle blue + tangelo + ink. Playful Y2K.
-   Type: Unbounded (display) · Hanken Grotesk (text) · Caveat (polaroid marker)
+   IRAAYA — teaser landing. Periwinkle blue · tangelo · ink.
+   Type: Schibsted Grotesk. Playfulness lives in the logo, colour & polaroids.
    ========================================================================== */
 
 :root{
@@ -8,156 +8,102 @@
   --bg-2:#AEC6EC;
   --paper:#FFFDF7;       /* polaroid white */
   --ink:#17140F;
-  --ink-2:#42506b;       /* muted blue-grey text */
+  --ink-2:#43506a;
   --orange:#E4631C;
   --orange-2:#BF4D12;
   --line:rgba(23,20,15,.16);
 
-  --logoW:clamp(360px,48vw,580px);
-  --f-disp:"Unbounded", system-ui, sans-serif;
-  --f-body:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-mark:"Caveat", "Segoe Script", cursive;
+  --logoW:clamp(330px,46vw,560px);
+  --f:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font-family:var(--f-body); -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  font-family:var(--f); -webkit-font-smoothing:antialiased; overflow-x:hidden;
 }
 img{ max-width:100%; display:block; }
 a{ color:inherit; text-decoration:none; }
-
-.eyebrow{
-  font-family:var(--f-body); text-transform:uppercase; letter-spacing:.26em;
-  font-size:.72rem; font-weight:700; color:var(--orange-2);
-}
+.eyebrow{ text-transform:uppercase; letter-spacing:.28em; font-size:.74rem; font-weight:600; color:var(--orange-2); }
 .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 
-/* ---------- Nav ---------------------------------------------------------- */
-.nav{
-  position:fixed; top:0; left:0; right:0; z-index:20;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:15px clamp(18px,4vw,46px);
-  transition:background .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
-}
-.nav.scrolled{ background:rgba(191,211,240,.82); backdrop-filter:blur(9px); box-shadow:0 1px 0 var(--line); }
-.nav__brand{ display:flex; align-items:center; gap:9px; font-family:var(--f-disp); font-weight:700; font-size:1rem; letter-spacing:-.01em; }
-.nav__brand img{ width:26px; height:26px; object-fit:contain; }
-.nav__link{ font-family:var(--f-disp); font-weight:600; font-size:.78rem; border-bottom:2px solid var(--ink); padding-bottom:2px; transition:color .2s ease, border-color .2s ease; }
-.nav__link:hover{ color:var(--orange-2); border-color:var(--orange-2); }
-
-/* ---------- Hero (logo hangs by its own thread) -------------------------- */
+/* ---------- Hero: the logo hangs from the very top edge ------------------ */
 .hero{
-  position:relative; min-height:100svh; overflow:hidden;
+  position:relative; overflow:hidden;
   display:flex; flex-direction:column; align-items:center;
-  padding:54px 22px clamp(30px,5vh,52px);
+  padding:6px 22px 0;
 }
-.hang{ display:inline-block; transform:translateX(-15%); }
-.drop{ margin-top:0; animation:drop 1.4s .12s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
+.hang{ display:inline-block; transform:translateX(-8%); }
+.drop{ margin-top:0; animation:drop 1.4s .1s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
   transform-origin:78% 2%;              /* the squiggle-thread built into the logo */
   display:inline-block; width:fit-content;
   cursor:grab; -webkit-tap-highlight-color:transparent;
-  animation:swing 4s 1.4s cubic-bezier(.36,0,.2,1) both,
-            sway 7.5s 5.2s ease-in-out infinite;
+  animation:swing 4s 1.3s cubic-bezier(.36,0,.2,1) both,
+            sway 7.5s 5s ease-in-out infinite;
   will-change:transform;
 }
 .pendulum:active{ cursor:grabbing; }
 .tag{ width:var(--logoW); height:auto; user-select:none; -webkit-user-drag:none; }
+.hero__meta{ display:inline-block; margin-top:calc(var(--logoW) * .12); }
 
-.hero__copy{ text-align:center; margin-top:calc(var(--logoW) * .2); }
-.hero__copy .eyebrow{ display:inline-block; }
-.hero__hint{ margin:14px auto 0; max-width:40ch; color:var(--ink-2); font-size:1.06rem; line-height:1.55; }
-.hero__hint b{ font-family:var(--f-disp); font-weight:600; color:var(--ink); }
-.hero__scroll{
-  position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
-  font-family:var(--f-mark); font-size:1.2rem; color:var(--orange-2); opacity:.85;
-}
-
-/* ---------- Section shell ------------------------------------------------ */
-.section{ padding:clamp(56px,9vw,110px) 22px; }
-.section__head{ text-align:center; max-width:40ch; margin:0 auto clamp(34px,5vw,56px); }
-.section__head h2{ font-family:var(--f-disp); font-weight:700; font-size:clamp(1.9rem,5.4vw,3.2rem); line-height:1.02; margin:.24em 0; letter-spacing:-.01em; }
-.section__head p{ color:var(--ink-2); font-size:1.04rem; }
-
-/* ---------- Polaroid deck (hover shuffles to front) --------------------- */
-.deck{
-  position:relative; width:min(320px,78vw); height:calc(min(320px,78vw) * 1.62);
-  margin:0 auto;
+/* ---------- Scroll-driven sticky card stack ----------------------------- */
+.stack{ position:relative; padding:8vh 22px 30vh; }
+.scard{
+  position:sticky; top:0; height:88vh;
+  display:flex; align-items:center; justify-content:center;
 }
 .pcard{
-  position:absolute; top:0; left:0; width:100%;
-  background:var(--paper); padding:12px 12px 46px; border-radius:5px;
-  box-shadow:0 16px 30px -14px rgba(23,20,15,.42);
-  transform-origin:bottom center; cursor:pointer;
-  transition:transform .45s cubic-bezier(.2,.85,.25,1), box-shadow .45s ease;
+  width:min(340px,82vw); background:var(--paper);
+  padding:14px 14px 16px; border-radius:6px;
+  box-shadow:0 26px 46px -22px rgba(23,20,15,.55);
+  transform-origin:center top; will-change:transform;
 }
-.pcard__img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:2px; background:var(--bg-2); }
-.pcard__cap{ font-family:var(--f-mark); text-align:center; font-size:1.7rem; line-height:1; color:var(--ink); margin-top:12px; }
-.pcard:nth-child(1){ transform:rotate(-12deg) translate(-58px,18px); z-index:1; }
-.pcard:nth-child(2){ transform:rotate(12deg) translate(58px,18px); z-index:2; }
-.pcard:nth-child(3){ transform:rotate(-2deg) translate(0,-4px); z-index:3; }
-.pcard:hover, .pcard:focus-visible{
-  transform:rotate(0deg) translateY(-18px) scale(1.05); z-index:20;
-  box-shadow:0 36px 54px -20px rgba(23,20,15,.5); outline:none;
-}
+.pcard__img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:3px; background:var(--bg-2); display:block; }
 
-/* ---------- Signup polaroid (email CTA in the strip) -------------------- */
-.signup{
-  max-width:470px; margin:clamp(40px,6vw,66px) auto 0;
-  background:var(--paper); border-radius:6px; padding:18px 18px 24px;
-  box-shadow:0 18px 34px -16px rgba(23,20,15,.4); transform:rotate(-1.3deg);
+/* the final card carries the signup in its strip */
+.pcard--cta .pcard__img{ aspect-ratio:3/2.3; }
+.pform{ display:flex; flex-direction:column; gap:8px; padding:14px 4px 4px; }
+.pform input{
+  width:100%; padding:13px 15px; border:1.5px solid var(--ink); border-radius:9px;
+  background:#fff; color:var(--ink); font-family:var(--f); font-size:1rem;
 }
-.signup__cap{ font-family:var(--f-mark); font-size:1.9rem; text-align:center; color:var(--orange-2); line-height:1; margin:2px 0 14px; }
-.signup form{ display:flex; gap:8px; }
-.signup input{
-  flex:1; min-width:0; padding:13px 16px; border:1.5px solid var(--ink); border-radius:9px;
-  background:#fff; color:var(--ink); font-family:var(--f-body); font-size:1rem;
+.pform input::placeholder{ color:#9a9aa5; }
+.pform input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); }
+.pform button{
+  width:100%; padding:13px 16px; border:1.5px solid var(--ink); border-radius:9px;
+  background:var(--ink); color:var(--paper); font-family:var(--f); font-weight:600; font-size:1rem;
+  cursor:pointer; transition:background .2s ease, transform .2s ease, border-color .2s ease;
 }
-.signup input::placeholder{ color:#9a9aa5; }
-.signup input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); }
-.signup button{
-  font-family:var(--f-disp); font-weight:600; font-size:.9rem; white-space:nowrap;
-  background:var(--ink); color:var(--paper); border:1.5px solid var(--ink); border-radius:9px;
-  padding:13px 20px; cursor:pointer; transition:background .2s ease, transform .2s ease, border-color .2s ease;
-}
-.signup button:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
-.signup__note{ margin:12px 2px 0; font-size:.82rem; color:var(--ink-2); text-align:center; transition:color .2s ease; }
-.signup__note.is-good{ color:var(--orange-2); font-weight:600; }
-.signup__note.is-err{ color:#b23b2e; }
+.pform button:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
+.pform__note{ margin:4px 2px 0; font-size:.8rem; color:var(--ink-2); text-align:center; transition:color .2s ease; }
+.pform__note.is-good{ color:var(--orange-2); font-weight:600; }
+.pform__note.is-err{ color:#b23b2e; }
 
 /* ---------- Footer ------------------------------------------------------- */
 .foot{
   display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-  padding:20px clamp(18px,4vw,46px); border-top:1px solid var(--line);
-  font-size:.8rem; color:var(--ink-2);
+  padding:18px clamp(18px,4vw,40px); border-top:1px solid var(--line);
+  font-size:.78rem; color:var(--ink-2);
 }
-.foot__hint{ letter-spacing:.12em; text-transform:uppercase; font-size:.72rem; }
+.foot__hint{ letter-spacing:.12em; text-transform:uppercase; font-size:.7rem; }
 
 /* ---------- Motion ------------------------------------------------------- */
 @keyframes drop{
-  0%{ transform:translateY(-125vh) }
-  52%{ transform:translateY(0) }
-  68%{ transform:translateY(-26px) }
-  82%{ transform:translateY(0) }
-  91%{ transform:translateY(-9px) }
-  100%{ transform:translateY(0) }
+  0%{ transform:translateY(-125vh) } 52%{ transform:translateY(0) }
+  68%{ transform:translateY(-24px) } 82%{ transform:translateY(0) }
+  91%{ transform:translateY(-8px) } 100%{ transform:translateY(0) }
 }
-/* settles ~-16deg — reads as a hanging tag */
+/* settles ~-8deg — hangs from the top without swinging a point off-screen */
 @keyframes swing{
-  0%{ transform:rotate(0deg) } 14%{ transform:rotate(-28deg) } 30%{ transform:rotate(-7deg) }
-  46%{ transform:rotate(-22deg) } 62%{ transform:rotate(-11deg) } 78%{ transform:rotate(-18deg) }
-  90%{ transform:rotate(-14.5deg) } 100%{ transform:rotate(-16deg) }
+  0%{ transform:rotate(4deg) } 16%{ transform:rotate(-18deg) } 34%{ transform:rotate(-2deg) }
+  52%{ transform:rotate(-12deg) } 70%{ transform:rotate(-5deg) } 86%{ transform:rotate(-9.5deg) }
+  100%{ transform:rotate(-8deg) }
 }
-@keyframes sway{ 0%,100%{ transform:rotate(-17.4deg) } 50%{ transform:rotate(-14.6deg) } }
+@keyframes sway{ 0%,100%{ transform:rotate(-9.4deg) } 50%{ transform:rotate(-6.6deg) } }
 
-@media (max-width:560px){
-  .signup form{ flex-direction:column; }
-  .signup button{ width:100%; }
-}
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
-  .pendulum{ animation:none; transform:rotate(-16deg); }
-  .pcard{ transition:none; }
+  .pendulum{ animation:none; transform:rotate(-8deg); }
 }

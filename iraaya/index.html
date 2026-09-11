@@ -4,23 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IRAAYA — For all that, you are</title>
-<meta name="description" content="IRAAYA — something to wear for all of it. Coming soon. Join the list." />
+<meta name="description" content="IRAAYA — coming soon. Join the list." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<header class="nav" id="nav">
-  <a class="nav__brand" href="#top">
-    <img src="assets/logo-mark.png" alt="" />
-    <span>IRAAYA</span>
-  </a>
-  <a class="nav__link" href="#join">Join the list</a>
-</header>
-
-<!-- HERO -->
+<!-- HERO — the logo hangs from the very top -->
 <main class="hero" id="top">
   <div class="hang">
     <div class="drop">
@@ -29,70 +21,64 @@
       </div>
     </div>
   </div>
-  <div class="hero__copy">
-    <h1 class="sr-only">IRAAYA — for all that, you are</h1>
-    <span class="eyebrow">Coming soon · 2026</span>
-    <p class="hero__hint">Dressing that begins with you — <b>your shape, your skin, your moment.</b></p>
-  </div>
-  <span class="hero__scroll">scroll — there's a peek below ↓</span>
+  <h1 class="sr-only">IRAAYA</h1>
+  <span class="eyebrow hero__meta">Coming soon · 2026</span>
 </main>
 
-<!-- POLAROID DECK -->
-<section class="section" id="peek">
-  <div class="section__head">
-    <span class="eyebrow">A little peek</span>
-    <h2>Three moods, one you</h2>
-    <p>Hover the stack — flip through the vibe. (There's more where these came from.)</p>
-  </div>
-
-  <div class="deck">
-    <figure class="pcard" tabindex="0">
-      <img class="pcard__img" src="assets/dayout.png" alt="Day-out look" loading="lazy" />
-      <figcaption class="pcard__cap">day out ✿</figcaption>
-    </figure>
-    <figure class="pcard" tabindex="0">
-      <img class="pcard__img" src="assets/y2k.png" alt="Y2K look" loading="lazy" />
-      <figcaption class="pcard__cap">y2k ✦</figcaption>
-    </figure>
-    <figure class="pcard" tabindex="0">
-      <img class="pcard__img" src="assets/office.png" alt="Office look" loading="lazy" />
-      <figcaption class="pcard__cap">office ☕</figcaption>
-    </figure>
-  </div>
-
-  <!-- email CTA lives in a polaroid strip -->
-  <div class="signup" id="join">
-    <p class="signup__cap">be first in ♡</p>
-    <form id="joinForm" novalidate>
-      <input type="email" id="joinEmail" name="email" placeholder="you@iraaya.club" required aria-label="Email address" />
-      <button type="submit">Join the list</button>
-    </form>
-    <p class="signup__note" id="joinNote">One note when the doors open. No spam, ever.</p>
+<!-- SCROLL-DRIVEN STICKY CARD STACK -->
+<section class="stack" id="join">
+  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/y2k.png" alt="Y2K look" loading="lazy" /></figure></div>
+  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/dayout.png" alt="Day-out look" loading="lazy" /></figure></div>
+  <div class="scard"><figure class="pcard"><img class="pcard__img" src="assets/office.png" alt="Office look" loading="lazy" /></figure></div>
+  <div class="scard">
+    <div class="pcard pcard--cta">
+      <img class="pcard__img" src="assets/office2.png" alt="After-hours look" loading="lazy" />
+      <form class="pform" id="joinForm" novalidate>
+        <input type="email" id="joinEmail" name="email" placeholder="you@iraaya.club" required aria-label="Email address" />
+        <button type="submit">Join the list</button>
+      </form>
+      <p class="pform__note" id="joinNote">One note when we open.</p>
+    </div>
   </div>
 </section>
 
 <footer class="foot">
   <span>© <span id="year"></span> IRAAYA</span>
-  <span class="foot__hint">your shape · your skin · your occasion</span>
 </footer>
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // nav backdrop on scroll
-  const nav = document.getElementById('nav');
-  addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 12));
-
-  // tap the tag to replay the drop from the ceiling
+  // tap the tag to replay the drop from the top
   const drop = document.querySelector('.drop');
   const pend = document.getElementById('pendulum');
-  function replay(){
+  pend.addEventListener('click', () => {
     drop.style.animation = 'none'; pend.style.animation = 'none';
     void drop.offsetWidth;
     drop.style.animation = 'drop 1.4s cubic-bezier(.3,.72,.2,1) both';
-    pend.style.animation = 'swing 4s 1.4s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5.2s ease-in-out infinite';
+    pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
+  });
+
+  // scroll-driven sticky card stack (vanilla — works on iOS; no libraries)
+  const stack = document.querySelector('.stack');
+  const cards = [...document.querySelectorAll('.stack .pcard')];
+  const n = cards.length;
+  let ticking = false;
+  function update(){
+    const total = stack.offsetHeight - window.innerHeight;
+    const passed = Math.min(Math.max(-stack.getBoundingClientRect().top, 0), Math.max(total, 1));
+    const p = total > 0 ? passed / total : 0;
+    for (let i = 0; i < n; i++){
+      const start = i / n;
+      const lp = Math.min(Math.max((p - start) / (1 - start || 1), 0), 1);
+      const target = Math.max(0.78, 1 - (n - 1 - i) * 0.07);
+      cards[i].style.transform = `scale(${(1 + (target - 1) * lp).toFixed(4)})`;
+    }
+    ticking = false;
   }
-  pend.addEventListener('click', replay);
+  addEventListener('scroll', () => { if (!ticking){ requestAnimationFrame(update); ticking = true; } }, { passive:true });
+  addEventListener('resize', update);
+  update();
 
   // waitlist (demo: validates + remembers locally; wire to a real endpoint later)
   const form = document.getElementById('joinForm');
@@ -101,8 +87,7 @@
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   try {
     if (localStorage.getItem('iraaya-joined')) {
-      note.textContent = "You're already on the list ✦ hang tight.";
-      note.className = 'signup__note is-good';
+      note.textContent = "You're on the list ✦"; note.className = 'pform__note is-good';
       form.querySelector('button').textContent = 'Joined ✓';
     }
   } catch (e) {}
@@ -110,15 +95,11 @@
     ev.preventDefault();
     const v = email.value.trim();
     if (!valid.test(v)) {
-      note.textContent = 'That email looks a little off — mind checking it?';
-      note.className = 'signup__note is-err';
-      email.focus(); return;
+      note.textContent = 'Check that email?'; note.className = 'pform__note is-err'; email.focus(); return;
     }
     try { localStorage.setItem('iraaya-joined', v); } catch (e) {}
-    note.textContent = "You're on the list ✦ we'll be in touch.";
-    note.className = 'signup__note is-good';
-    form.reset();
-    form.querySelector('button').textContent = 'Joined ✓';
+    note.textContent = "You're on the list ✦"; note.className = 'pform__note is-good';
+    form.reset(); form.querySelector('button').textContent = 'Joined ✓';
   });
 </script>
 </body>
