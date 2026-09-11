@@ -7,7 +7,7 @@
 <meta name="description" content="IRAAYA — a new fashion house. Launching 2026. Join the list." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 </head>
@@ -26,6 +26,9 @@
 
 <!-- HERO — the logo hangs from the top -->
 <main class="hero" id="top">
+  <span class="hero__label hero__label--tl">IRAAYA©<br />Est. MMXXVI</span>
+  <span class="hero__label hero__label--tr"><span id="clock">◷ --:--</span><br />New Delhi</span>
+
   <div class="hang">
     <div class="drop">
       <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
@@ -33,9 +36,11 @@
       </div>
     </div>
   </div>
-  <h1 class="sr-only">IRAAYA</h1>
-  <p class="hero__status">Launching 2026</p>
-  <a class="btn hero__cta" href="#lookbook">Join the waitlist</a>
+
+  <h1 class="hero__display">For all that,<br /><em>you&nbsp;are.</em></h1>
+
+  <span class="hero__label hero__label--bl">N°01 — The&nbsp;debut · Coming&nbsp;2026</span>
+  <a class="hero__label hero__label--br" href="#lookbook">Scroll ↓</a>
 </main>
 
 <!-- CONTEXT — scroll-scrubbed word reveal (placeholder copy — edit freely) -->
@@ -83,6 +88,14 @@
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 
+  // live clock (New Delhi) — a small craft detail
+  const clock = document.getElementById('clock');
+  function tickClock(){
+    const t = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata' });
+    if (clock) clock.textContent = '◷ ' + t + ' IST';
+  }
+  tickClock(); setInterval(tickClock, 15000);
+
   // header backdrop on scroll
   const hdr = document.getElementById('hdr');
   addEventListener('scroll', () => hdr.classList.toggle('scrolled', scrollY > 12), { passive:true });
@@ -108,7 +121,7 @@
     for (const w of words){
       const y = w.getBoundingClientRect().top;
       const p = Math.min(Math.max((top - y)/(top - bot), 0), 1);
-      w.style.opacity = (0.3 + 0.7*p).toFixed(3);
+      w.style.opacity = (0.55 + 0.45*p).toFixed(3);
     }
   }
 

@@ -9,8 +9,10 @@
   --ink:#17140F; --ink-2:#43506a;
   --orange:#E4631C; --orange-2:#BF4D12;
   --line:rgba(23,20,15,.16);
-  --logoW:clamp(300px,42vw,520px);
-  --f:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --logoW:clamp(270px,34vw,440px);
+  --f:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-disp:"Fraunces", Georgia, "Times New Roman", serif;
+  --f-mono:"Space Mono", ui-monospace, "SFMono-Regular", monospace;
 }
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
@@ -18,7 +20,7 @@ body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--f); -w
 img{ max-width:100%; display:block; }
 a{ color:inherit; text-decoration:none; }
 .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
-.eyebrow{ text-transform:uppercase; letter-spacing:.26em; font-size:.74rem; font-weight:600; color:var(--orange-2); }
+.eyebrow{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:400; color:var(--orange-2); }
 
 /* ---------- Header ------------------------------------------------------- */
 .hdr{
@@ -27,23 +29,35 @@ a{ color:inherit; text-decoration:none; }
   padding:13px clamp(16px,4vw,40px); transition:background .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
 }
 .hdr.scrolled{ background:rgba(191,211,240,.86); backdrop-filter:blur(10px); box-shadow:0 1px 0 var(--line); }
-.hdr__brand{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:1.02rem; letter-spacing:.03em; }
+.hdr__brand{ display:flex; align-items:center; gap:8px; font-family:var(--f-mono); font-weight:700; font-size:.92rem; letter-spacing:.06em; text-transform:uppercase; }
 .hdr__brand img{ width:24px; height:24px; object-fit:contain; }
 .hdr__nav{ display:flex; align-items:center; gap:clamp(14px,2.4vw,26px); }
-.hdr__nav .nav-link{ font-weight:500; font-size:.88rem; }
+.hdr__nav .nav-link{ font-family:var(--f-mono); font-weight:400; font-size:.76rem; letter-spacing:.05em; text-transform:uppercase; }
 .hdr__nav .nav-link:hover{ color:var(--orange-2); }
 .btn{
-  font-weight:600; font-size:.82rem; background:var(--ink); color:var(--paper);
-  padding:9px 17px; border-radius:999px; border:1.5px solid var(--ink);
+  font-family:var(--f-mono); font-weight:700; font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+  background:var(--ink); color:var(--paper);
+  padding:10px 17px; border-radius:999px; border:1.5px solid var(--ink);
   transition:background .2s ease, border-color .2s ease, transform .2s ease; cursor:pointer;
 }
 .btn:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
 
-/* ---------- Hero: logo hangs from the top ------------------------------- */
+/* ---------- Hero: editorial — mono labels, big statement, hung logo ----- */
 .hero{
-  position:relative; overflow:hidden; text-align:center;
-  display:flex; flex-direction:column; align-items:center; padding:4px 22px clamp(30px,5vh,54px);
+  position:relative; overflow:hidden; text-align:center; min-height:100svh;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:2px 22px clamp(56px,9vh,88px);
 }
+.hero__label{
+  position:absolute; z-index:4; font-family:var(--f-mono); font-size:.7rem; line-height:1.5;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--ink-2);
+}
+.hero__label--tl{ top:64px; left:clamp(16px,4vw,40px); }
+.hero__label--tr{ top:64px; right:clamp(16px,4vw,40px); text-align:right; }
+.hero__label--bl{ bottom:26px; left:clamp(16px,4vw,40px); max-width:40vw; }
+.hero__label--br{ bottom:26px; right:clamp(16px,4vw,40px); color:var(--orange-2); }
+.hero__label--br:hover{ color:var(--ink); }
+
 .hang{ display:inline-block; transform:translateX(-8%); }
 .drop{ margin-top:0; animation:drop 1.4s .1s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
@@ -54,20 +68,26 @@ a{ color:inherit; text-decoration:none; }
 }
 .pendulum:active{ cursor:grabbing; }
 .tag{ width:var(--logoW); height:auto; user-select:none; -webkit-user-drag:none; }
-.hero__status{ margin:calc(var(--logoW) * .1) 0 0; color:var(--orange-2); letter-spacing:.24em; text-transform:uppercase; font-size:.78rem; font-weight:600; }
-.hero__cta{ margin-top:20px; font-size:.92rem; padding:13px 26px; }
+
+.hero__display{
+  font-family:var(--f-disp); font-weight:700; font-optical-sizing:auto;
+  font-size:clamp(2.9rem,9.6vw,7.2rem); line-height:.92; letter-spacing:-.025em;
+  margin:calc(var(--logoW) * .04) 0 0; color:var(--ink); text-wrap:balance;
+}
+.hero__display em{ font-style:italic; font-weight:500; color:var(--orange-2); }
 
 /* ---------- Context: scroll word reveal --------------------------------- */
 .context{ display:flex; justify-content:center; padding:clamp(60px,16vh,150px) 26px; }
 .reveal-text{
-  font-weight:700; font-size:clamp(1.7rem,4.6vw,3rem); line-height:1.28; letter-spacing:-.02em;
-  max-width:20ch; margin:0; text-align:center; color:var(--ink);
+  font-family:var(--f-disp); font-weight:600; font-optical-sizing:auto;
+  font-size:clamp(1.9rem,5vw,3.5rem); line-height:1.18; letter-spacing:-.02em;
+  max-width:19ch; margin:0; text-align:center; color:var(--ink);
 }
-.reveal-text .w{ opacity:.3; transition:opacity .15s linear; }
+.reveal-text .w{ opacity:.55; transition:opacity .15s linear; }
 
 /* ---------- Lookbook: sticky scroll stack ------------------------------- */
 .look__head{ text-align:center; padding:0 22px; }
-.look__head h2{ font-weight:700; font-size:clamp(1.7rem,4.6vw,2.7rem); letter-spacing:-.02em; margin:.3em 0 0; }
+.look__head h2{ font-family:var(--f-disp); font-weight:700; font-size:clamp(2rem,5.2vw,3.2rem); letter-spacing:-.02em; margin:.28em 0 0; }
 .stack{ position:relative; padding:5vh 22px 24vh; }
 .scard{ position:sticky; top:0; height:86vh; display:flex; align-items:center; justify-content:center; }
 
