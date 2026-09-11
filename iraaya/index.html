@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 </head>
 <body>
 
@@ -25,12 +26,6 @@
 
 <!-- HERO — the logo hangs from the top -->
 <main class="hero" id="top">
-  <div class="hero__glow" aria-hidden="true"></div>
-  <span class="spark s1" aria-hidden="true">✦</span>
-  <span class="spark s2" aria-hidden="true">✧</span>
-  <span class="spark s3" aria-hidden="true">✦</span>
-  <span class="spark s4" aria-hidden="true">✧</span>
-  <span class="spark s5" aria-hidden="true">✦</span>
   <div class="hang">
     <div class="drop">
       <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
@@ -133,11 +128,50 @@
     }
   }
 
+  // parallax on the pop-art break
+  const paImg = document.querySelector('.popart__img');
+  const paSec = document.querySelector('.popart');
+  function parallaxTick(){
+    if (!paImg || !paSec) return;
+    const r = paSec.getBoundingClientRect();
+    const prog = (r.top + r.height/2 - innerHeight/2) / innerHeight;
+    const room = paSec.offsetHeight * 0.14;
+    const ty = Math.max(-room, Math.min(room, -prog * room));
+    paImg.style.transform = `translateY(${ty.toFixed(1)}px)`;
+  }
+
   let ticking = false;
-  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { revealTick(); stackTick(); ticking = false; }); ticking = true; } }
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { revealTick(); stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
   addEventListener('scroll', onScroll, { passive:true });
-  addEventListener('resize', () => { revealTick(); stackTick(); drawAllPixels(); });
-  revealTick(); stackTick();
+  addEventListener('resize', () => { revealTick(); stackTick(); parallaxTick(); drawAllPixels(); });
+  revealTick(); stackTick(); parallaxTick();
+
+  // buttery smooth scroll (Lenis if it loaded; native scroll otherwise)
+  if (window.Lenis && matchMedia('(prefers-reduced-motion: no-preference)').matches){
+    const lenis = window.lenis = new Lenis({ lerp:0.1, smoothWheel:true });
+    (function raf(t){ lenis.raf(t); requestAnimationFrame(raf); })();
+    // smooth anchor links through Lenis
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const id = a.getAttribute('href');
+        const t = id.length > 1 && document.querySelector(id);
+        if (t){ e.preventDefault(); lenis.scrollTo(t); }
+      });
+    });
+  }
+
+  // magnetic buttons (pointer devices only)
+  if (matchMedia('(hover:hover) and (pointer:fine)').matches){
+    document.querySelectorAll('.btn, .pcta button').forEach(el => {
+      el.addEventListener('mousemove', e => {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left - r.width/2) * 0.3;
+        const y = (e.clientY - r.top - r.height/2) * 0.4;
+        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      });
+      el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+    });
+  }
 
   // ---- pixel-flash on hover (Pixel-Hover-Card, vanilla canvas) ----
   function drawPixel(card){
