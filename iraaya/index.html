@@ -4,219 +4,96 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IRAAYA — For all that, you are</title>
-<meta name="description" content="IRAAYA — a Y2K editorial fashion label. Life is too short to wear boring." />
+<meta name="description" content="IRAAYA — something to wear for all of it. Coming soon. Join the list." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- NAV -->
 <header class="nav" id="nav">
   <a class="nav__brand" href="#top">
-    <img src="assets/logo-mark.png" alt="Iraaya logo" />
+    <img src="assets/logo-mark.png" alt="" />
     <span>IRAAYA</span>
   </a>
-  <nav class="nav__links" id="navLinks">
-    <a href="#lookbook">Lookbook</a>
-    <a href="#story">Story</a>
-    <a href="#values">Values</a>
-    <a href="#join">Join</a>
-  </nav>
-  <a class="nav__cta" href="#join">Shop the drop</a>
-  <button class="nav__burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+  <a class="nav__link" href="#join">Join the list</a>
 </header>
 
-<!-- HERO -->
-<section class="hero" id="top">
+<main class="hero" id="top">
+  <!-- the tag hangs from the ceiling rail -->
   <div class="drop">
     <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
+      <span class="mount"></span>
+      <span class="string"></span>
       <img class="tag" src="assets/logo-tag.png" alt="IRAAYA — for all that, you are" draggable="false" />
     </div>
   </div>
+
   <div class="hero__copy">
     <h1 class="sr-only">IRAAYA</h1>
-    <span class="eyebrow hero__eyebrow">Y2K editorial label</span>
-    <p class="hero__tag">For all that, you are.</p>
-    <p class="hero__sub">Clothes that refuse to blend in — for the loud, the nostalgic and the unapologetically you.</p>
-    <div class="hero__cta">
-      <a class="btn btn--solid" href="#lookbook">Enter the lookbook</a>
-      <a class="btn btn--ghost" href="#story">Our story</a>
-    </div>
-    <span class="hero__hint">psst — tap the tag</span>
-  </div>
-</section>
+    <span class="eyebrow">Coming soon · 2026</span>
+    <p class="display">For all that,<br /><em>you are.</em></p>
+    <p class="lede">Dressing that begins with you — your shape, your skin, your moment.</p>
 
-<!-- MARQUEE -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee__track">
-    <span>LIFE IS TOO SHORT TO WEAR BORING ✦ LIFE IS TOO SHORT TO WEAR BORING ✦&nbsp;</span>
-    <span>LIFE IS TOO SHORT TO WEAR BORING ✦ LIFE IS TOO SHORT TO WEAR BORING ✦&nbsp;</span>
-  </div>
-</div>
-
-<!-- LOOKBOOK -->
-<section class="section" id="lookbook">
-  <div class="wrap">
-    <div class="section__head reveal">
-      <span class="eyebrow">The Lookbook</span>
-      <h2>Four moods, one rule</h2>
-      <p>Every look is a scene. Pick your energy — office, Y2K, day out — and wear it louder than the room.</p>
-    </div>
-    <div class="lookbook">
-      <article class="card reveal">
-        <span class="card__pin"></span>
-        <img class="card__img" src="assets/office.png" alt="Office look — Life is too short to wear boring" loading="lazy" />
-        <div class="card__label"><span class="tile">OFF</span><span class="tile tile--cream">ICE</span><b>Suited &amp; subversive</b></div>
-      </article>
-      <article class="card reveal">
-        <span class="card__pin"></span>
-        <img class="card__img" src="assets/y2k.png" alt="Y2K look — Life is too short to wear boring" loading="lazy" />
-        <div class="card__label"><span class="tile">Y</span><span class="tile tile--cream">2K</span><b>Blue-grid nostalgia</b></div>
-      </article>
-      <article class="card reveal">
-        <span class="card__pin"></span>
-        <img class="card__img" src="assets/dayout.png" alt="Day out look — Life is too short to wear boring" loading="lazy" />
-        <div class="card__label"><span class="tile">DAY</span><span class="tile tile--cream">OUT</span><b>Polka &amp; petrol</b></div>
-      </article>
-      <article class="card reveal">
-        <span class="card__pin"></span>
-        <img class="card__img" src="assets/office2.png" alt="After hours look — Life is too short to wear boring" loading="lazy" />
-        <div class="card__label"><span class="tile">AFTER</span><span class="tile tile--cream">HRS</span><b>Grid &amp; grain</b></div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURE / POP ART -->
-<section class="section section--alt" id="story">
-  <div class="wrap">
-    <div class="feature">
-      <div class="feature__art reveal"><img src="assets/popart-hero.png" alt="Iraaya pop-art illustration" loading="lazy" /></div>
-      <div class="reveal">
-        <span class="eyebrow">Our Story</span>
-        <h2>Loud on purpose.</h2>
-        <p>IRAAYA started with two sisters and one refusal — to dress down to fit in. We mix manga line-art, scrapbook chaos and Y2K grids into pieces that feel like the best day of a decade you half-remember.</p>
-        <p>“Dislike” isn't a threat, it's a filter. If the outfit doesn't make you feel something, it's not ours.</p>
-        <a class="btn btn--solid" href="#values">What we stand for</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- VALUES -->
-<section class="section" id="values">
-  <div class="wrap">
-    <div class="section__head reveal">
-      <span class="eyebrow">The Manifesto</span>
-      <h2>For all that, you are</h2>
-    </div>
-    <div class="values">
-      <div class="value reveal"><div class="value__num">01</div><h3>Bold</h3><p>Colour that argues back. Silhouettes that take up space. If it whispers, it's not in the collection.</p></div>
-      <div class="value reveal"><div class="value__num">02</div><h3>Nostalgic</h3><p>Grainy grids, sticker sheets and that early-2000s glow — remixed for the way you dress now.</p></div>
-      <div class="value reveal"><div class="value__num">03</div><h3>Unapologetic</h3><p>Made for every body and every mood. You don't tone it down — you turn it up.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- COLLAGE -->
-<section class="section section--alt">
-  <div class="wrap">
-    <div class="collage">
-      <div class="collage__img reveal"><img src="assets/collage.png" alt="Pinned polaroid collage of Iraaya looks" loading="lazy" /></div>
-      <div class="reveal">
-        <span class="eyebrow">Behind the pin-board</span>
-        <h2>Cut, pinned, worn.</h2>
-        <p>Every drop begins as a wall of polaroids and torn magazine tiles. We keep the tape, the grain and the happy accidents — because the mess is the point.</p>
-        <a class="btn btn--ghost" href="#lookbook">Back to the looks</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- JOIN -->
-<section class="section join" id="join">
-  <div class="wrap">
-    <span class="eyebrow" style="color:var(--orange)">The List</span>
-    <h2>Be first to the <em>drop</em></h2>
-    <p>New scenes, early access and the occasional sticker in the post. No boring emails — promise.</p>
-    <form class="join__form" id="joinForm">
-      <input type="email" name="email" placeholder="you@iraaya.club" required aria-label="Email address" />
-      <button type="submit">Join</button>
+    <form class="join" id="joinForm" novalidate>
+      <input type="email" id="joinEmail" name="email" placeholder="you@iraaya.club" required aria-label="Email address" />
+      <button type="submit">Join the list</button>
     </form>
-    <p class="join__note" id="joinNote">Demo form — no email is sent or stored.</p>
+    <p class="microcopy" id="joinNote">Be first through the door. No spam — one note when we open.</p>
   </div>
-</section>
 
-<!-- FOOTER -->
-<footer class="footer">
-  <div class="wrap">
-    <div class="footer__top">
-      <div class="footer__brand">
-        <img src="assets/logo-mark.png" alt="Iraaya logo" />
-        <p>For all that, you are.</p>
-      </div>
-      <div class="footer__cols">
-        <div class="footer__col">
-          <h4>Shop</h4>
-          <a href="#lookbook">Lookbook</a><a href="#lookbook">Office</a><a href="#lookbook">Y2K</a><a href="#lookbook">Day out</a>
-        </div>
-        <div class="footer__col">
-          <h4>Brand</h4>
-          <a href="#story">Story</a><a href="#values">Manifesto</a><a href="#join">Newsletter</a>
-        </div>
-        <div class="footer__col">
-          <h4>Follow</h4>
-          <a href="#">Instagram</a><a href="#">TikTok</a><a href="#">Pinterest</a>
-        </div>
-      </div>
-    </div>
-    <div class="footer__word">IRAAYA</div>
-    <div class="footer__base">
-      <span>© <span id="year"></span> IRAAYA. All looks reserved.</span>
-      <span>Made with orange, cream &amp; noise.</span>
-    </div>
-  </div>
+  <a class="scrollcue" href="#join" aria-hidden="true">tap the tag ✦</a>
+</main>
+
+<footer class="foot" id="join">
+  <span>© <span id="year"></span> IRAAYA</span>
+  <span class="foot__hint">your shape · your skin · your occasion</span>
 </footer>
 
 <script>
-  // year
   document.getElementById('year').textContent = new Date().getFullYear();
 
-  // nav shrink + mobile toggle
+  // nav gains a backdrop once you scroll
   const nav = document.getElementById('nav');
-  addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 20));
-  document.getElementById('burger').addEventListener('click', () => nav.classList.toggle('open'));
-  document.getElementById('navLinks').addEventListener('click', e => {
-    if (e.target.tagName === 'A') nav.classList.remove('open');
-  });
+  addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 12));
 
-  // tap the tag to replay the drop + swing
+  // tap the tag to replay the drop from the ceiling
   const drop = document.querySelector('.drop');
   const pend = document.getElementById('pendulum');
   function replay(){
-    drop.style.animation = 'none';
-    pend.style.animation = 'none';
-    void drop.offsetWidth;               // force reflow
+    drop.style.animation = 'none'; pend.style.animation = 'none';
+    void drop.offsetWidth;
     drop.style.animation = 'drop 1.5s cubic-bezier(.3,.72,.2,1) both';
-    pend.style.animation = 'swing 3.6s 1.55s cubic-bezier(.36,0,.2,1) both, sway 7s 5.05s ease-in-out infinite';
+    pend.style.animation = 'swing 3.6s 1.5s cubic-bezier(.36,0,.2,1) both, sway 7s 5s ease-in-out infinite';
   }
   pend.addEventListener('click', replay);
 
-  // reveal on scroll
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
-  }, { threshold: 0.14 });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
-
-  // demo newsletter
-  document.getElementById('joinForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const note = document.getElementById('joinNote');
-    note.textContent = "You're on the list ✦ (demo — nothing was sent)";
-    note.style.color = 'var(--orange)';
-    e.target.reset();
+  // waitlist (demo: validates + remembers locally; wire to a real endpoint later)
+  const form = document.getElementById('joinForm');
+  const email = document.getElementById('joinEmail');
+  const note = document.getElementById('joinNote');
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  try {
+    if (localStorage.getItem('iraaya-joined')) {
+      note.textContent = "You're already on the list ✦ hang tight.";
+      note.className = 'microcopy is-good';
+      form.querySelector('button').textContent = 'Joined ✓';
+    }
+  } catch (e) {}
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const v = email.value.trim();
+    if (!valid.test(v)) {
+      note.textContent = 'That email looks a little off — mind checking it?';
+      note.className = 'microcopy is-err';
+      email.focus(); return;
+    }
+    try { localStorage.setItem('iraaya-joined', v); } catch (e) {}
+    note.textContent = "You're on the list ✦ we'll be in touch.";
+    note.className = 'microcopy is-good';
+    form.reset();
+    form.querySelector('button').textContent = 'Joined ✓';
   });
 </script>
 </body>
