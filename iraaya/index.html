@@ -22,9 +22,11 @@
 
 <main class="hero" id="top">
   <!-- the tag hangs by the thread built into the logo itself -->
-  <div class="drop">
-    <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
-      <img class="tag" src="assets/logo-tag.png" alt="IRAAYA — for all that, you are" draggable="false" />
+  <div class="hang">
+    <div class="drop">
+      <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
+        <img class="tag" src="assets/logo-tag.png" alt="IRAAYA — for all that, you are" draggable="false" />
+      </div>
     </div>
   </div>
 
@@ -63,7 +65,7 @@
     drop.style.animation = 'none'; pend.style.animation = 'none';
     void drop.offsetWidth;
     drop.style.animation = 'drop 1.5s cubic-bezier(.3,.72,.2,1) both';
-    pend.style.animation = 'swing 3.8s 1.5s cubic-bezier(.36,0,.2,1) both, sway 7s 5.1s ease-in-out infinite';
+    pend.style.animation = 'swing 3.8s 1.4s cubic-bezier(.36,0,.2,1) both, sway 7s 5s ease-in-out infinite';
   }
   pend.addEventListener('click', replay);
 

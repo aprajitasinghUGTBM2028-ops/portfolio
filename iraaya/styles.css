@@ -51,20 +51,21 @@ a{ color:inherit; text-decoration:none; }
 .hero{
   position:relative; min-height:100svh; overflow:hidden;
   display:flex; flex-direction:column; align-items:center;
-  padding:0 22px clamp(30px,6vh,64px);
+  padding:56px 22px clamp(28px,5vh,56px);
 }
-.drop{ margin-top:clamp(26px,6vh,64px); animation:drop 1.5s .15s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
+/* .hang recenters the tilted logo; .drop falls in; .pendulum swings from the thread */
+.hang{ display:inline-block; transform:translateX(-9%); }
+.drop{ margin-top:clamp(2px,1vh,12px); animation:drop 1.4s .12s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
-  /* pivot on the free end of the squiggle-thread built into the logo (~78% across, top) */
-  transform-origin:78% 2%;
+  transform-origin:72% 4%;              /* the squiggle-thread that is part of the logo */
   display:inline-block; width:fit-content;
   cursor:grab; -webkit-tap-highlight-color:transparent;
-  animation:swing 3.8s 1.5s cubic-bezier(.36,0,.2,1) both,
-            sway 7s 5.1s ease-in-out infinite;
+  animation:swing 3.8s 1.4s cubic-bezier(.36,0,.2,1) both,
+            sway 7s 5s ease-in-out infinite;
   will-change:transform;
 }
 .pendulum:active{ cursor:grabbing; }
-.tag{ width:clamp(214px,23vw,300px); height:auto; filter:drop-shadow(0 22px 26px rgba(25,21,16,.22)); user-select:none; -webkit-user-drag:none; }
+.tag{ width:clamp(300px,40vw,470px); height:auto; user-select:none; -webkit-user-drag:none; }
 
 .hero__copy{ text-align:center; margin-top:clamp(12px,2.2vh,26px); max-width:640px; }
 .hero__copy .eyebrow{ display:inline-block; margin-bottom:14px; }
@@ -118,18 +119,18 @@ a{ color:inherit; text-decoration:none; }
   91%{ transform:translateY(-9px) }
   100%{ transform:translateY(0) }
 }
-/* settles to ~-20deg — the angle the tag naturally hangs at from the thread's top-corner anchor */
+/* settles to ~-13deg — a believable resting hang from the thread */
 @keyframes swing{
-  0%{ transform:rotate(-3deg) }
-  14%{ transform:rotate(-35deg) }
-  30%{ transform:rotate(-10deg) }
-  46%{ transform:rotate(-27deg) }
-  62%{ transform:rotate(-15deg) }
-  78%{ transform:rotate(-23deg) }
-  90%{ transform:rotate(-18.5deg) }
-  100%{ transform:rotate(-20deg) }
+  0%{ transform:rotate(3deg) }
+  14%{ transform:rotate(-25deg) }
+  30%{ transform:rotate(-4deg) }
+  46%{ transform:rotate(-19deg) }
+  62%{ transform:rotate(-8deg) }
+  78%{ transform:rotate(-15deg) }
+  90%{ transform:rotate(-11.5deg) }
+  100%{ transform:rotate(-13deg) }
 }
-@keyframes sway{ 0%,100%{ transform:rotate(-21.6deg) } 50%{ transform:rotate(-18.4deg) } }
+@keyframes sway{ 0%,100%{ transform:rotate(-14.3deg) } 50%{ transform:rotate(-11.7deg) } }
 
 @media (max-width:560px){
   .join{ flex-direction:column; }
@@ -137,5 +138,5 @@ a{ color:inherit; text-decoration:none; }
 }
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
-  .pendulum{ animation:none; transform:rotate(-20deg); }  /* still hangs at its natural angle */
+  .pendulum{ animation:none; transform:rotate(-13deg); }  /* still hangs at its natural angle */
 }
