@@ -32,8 +32,6 @@
 <section class="hero" id="top">
   <div class="drop">
     <div class="pendulum" id="pendulum" role="img" aria-label="IRAAYA — twin sunburst tag" title="Give it a swing">
-      <span class="pin"></span>
-      <span class="string"></span>
       <img class="tag" src="assets/logo-tag.png" alt="IRAAYA — for all that, you are" draggable="false" />
     </div>
   </div>
@@ -194,14 +192,17 @@
     if (e.target.tagName === 'A') nav.classList.remove('open');
   });
 
-  // tap the tag to swing it again
+  // tap the tag to replay the drop + swing
+  const drop = document.querySelector('.drop');
   const pend = document.getElementById('pendulum');
-  function reSwing(){
+  function replay(){
+    drop.style.animation = 'none';
     pend.style.animation = 'none';
-    void pend.offsetWidth;               // force reflow
-    pend.style.animation = 'swing 3.2s cubic-bezier(.36,0,.2,1) both, sway 7s 3.2s ease-in-out infinite';
+    void drop.offsetWidth;               // force reflow
+    drop.style.animation = 'drop 1.5s cubic-bezier(.3,.72,.2,1) both';
+    pend.style.animation = 'swing 3.6s 1.55s cubic-bezier(.36,0,.2,1) both, sway 7s 5.05s ease-in-out infinite';
   }
-  pend.addEventListener('click', reSwing);
+  pend.addEventListener('click', replay);
 
   // reveal on scroll
   const io = new IntersectionObserver((entries) => {
