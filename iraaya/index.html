@@ -110,20 +110,16 @@
     pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
   });
 
-  // ---- scroll-scrubbed word reveal (Text-Reveal-on-Scroll, vanilla) ----
+  // ---- word reveal on enter (robust: visible by default; animates in once) ----
   document.querySelectorAll('[data-reveal]').forEach(el => {
-    el.innerHTML = el.textContent.trim().split(/\s+/)
-      .map(w => `<span class="w">${w} </span>`).join('');
+    const parts = el.textContent.trim().split(/\s+/);
+    el.innerHTML = parts.map((w,i) => `<span class="w" style="--i:${i}">${w} </span>`).join('');
+    el.classList.add('js-reveal');
+    const io = new IntersectionObserver(ents => {
+      ents.forEach(e => { if (e.isIntersecting){ el.classList.add('in'); io.disconnect(); } });
+    }, { threshold:0.3 });
+    io.observe(el);
   });
-  const words = [...document.querySelectorAll('[data-reveal] .w')];
-  function revealTick(){
-    const vh = innerHeight, top = vh*0.82, bot = vh*0.34;
-    for (const w of words){
-      const y = w.getBoundingClientRect().top;
-      const p = Math.min(Math.max((top - y)/(top - bot), 0), 1);
-      w.style.opacity = (0.55 + 0.45*p).toFixed(3);
-    }
-  }
 
   // ---- scroll-driven sticky card stack (vanilla; iOS-safe) ----
   const stack = document.querySelector('.stack');
@@ -154,10 +150,10 @@
   }
 
   let ticking = false;
-  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { revealTick(); stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
   addEventListener('scroll', onScroll, { passive:true });
-  addEventListener('resize', () => { revealTick(); stackTick(); parallaxTick(); drawAllPixels(); });
-  revealTick(); stackTick(); parallaxTick();
+  addEventListener('resize', () => { stackTick(); parallaxTick(); drawAllPixels(); });
+  stackTick(); parallaxTick();
 
   // buttery smooth scroll (Lenis if it loaded; native scroll otherwise)
   if (window.Lenis && matchMedia('(prefers-reduced-motion: no-preference)').matches){
