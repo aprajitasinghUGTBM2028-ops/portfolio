@@ -78,24 +78,19 @@ a{ color:inherit; text-decoration:none; }
 }
 .hero__display em{ font-style:italic; font-weight:500; color:var(--orange-2); }
 
-/* ---------- Context: bold orange band, big serif statement -------------- */
-.context{
-  width:100vw; margin-left:calc(50% - 50vw); background:var(--cream); color:var(--ink);
-  display:flex; justify-content:center; padding:clamp(96px,20vh,200px) 26px;
-  border-top:1px solid var(--line);
+/* ---------- Quote: scroll-scrubbed read-in, then clears away ------------- */
+.quote{ position:relative; height:180vh; }
+.quote__sticky{
+  position:sticky; top:0; height:100vh; display:flex; align-items:center; justify-content:center; padding:0 26px;
 }
-.reveal-text{
+.quote__text{
   font-family:var(--f-disp); font-weight:600; font-optical-sizing:auto;
-  font-size:clamp(2rem,5.6vw,3.9rem); line-height:1.14; letter-spacing:-.02em;
-  max-width:19ch; margin:0; text-align:center; color:var(--ink);
+  font-size:clamp(2rem,5.8vw,4.1rem); line-height:1.14; letter-spacing:-.02em;
+  max-width:19ch; margin:0; text-align:center; color:var(--ink); will-change:transform, opacity;
 }
-/* robust reveal: fully visible without JS; JS adds .js-reveal for the entrance */
-.reveal-text .w{ display:inline-block; }
-.js-reveal .w{ opacity:0; transform:translateY(.4em); transition:opacity .5s ease, transform .55s cubic-bezier(.2,.8,.2,1); transition-delay:calc(var(--i,0) * 24ms); }
-.js-reveal.in .w{ opacity:1; transform:none; }
+.quote__text .w{ display:inline-block; opacity:.14; }
 
-/* ---------- Lookbook: cream ground, sticky scroll stack ----------------- */
-.lookbook{ background:var(--cream); }
+/* ---------- Lookbook: floats on the aurora, sticky scroll stack --------- */
 .look__head{ text-align:center; padding:clamp(46px,7vw,80px) 22px 0; }
 .look__head h2{ font-family:var(--f-disp); font-weight:700; font-size:clamp(2rem,5.2vw,3.2rem); letter-spacing:-.02em; margin:.28em 0 0; }
 .stack{ position:relative; padding:5vh 22px 24vh; }
@@ -134,11 +129,6 @@ a{ color:inherit; text-decoration:none; }
   position:fixed; inset:0; z-index:100; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-/* depth: a faint gradient instead of one flat fill (viewport-locked) */
-body::before{
-  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
-  background:radial-gradient(135% 95% at 50% -12%, #CEDCF4 0%, #B9CFEF 46%, #A7C1EA 100%);
-}
 ::selection{ background:var(--orange); color:var(--paper); }
 html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 ::-webkit-scrollbar{ width:11px; }
@@ -162,12 +152,21 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   object-fit:cover; object-position:50% 30%; will-change:transform;
 }
 
-/* ---------- Footer (minimal — pending your direction) ------------------- */
-.foot{
-  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-  padding:18px clamp(18px,4vw,40px); border-top:1px solid var(--line);
-  font-size:.78rem; color:var(--ink-2);
+/* ---------- Footer — bleeding pop-art with parallax --------------------- */
+.foot{ position:relative; }
+.foot .popart{ height:min(84vh,700px); border:0; border-top:1.5px solid var(--ink); background:var(--ink); }
+.foot__scrim{ position:absolute; inset:0; z-index:1; background:linear-gradient(to bottom, rgba(23,20,15,0) 26%, rgba(23,20,15,.5) 60%, rgba(23,20,15,.88) 100%); }
+.foot__content{ position:absolute; left:0; right:0; bottom:0; z-index:2; color:var(--cream); padding:0 clamp(18px,4vw,44px) 26px; }
+.foot__word{ font-family:var(--f-disp); font-weight:700; font-size:clamp(3.4rem,19vw,13rem); line-height:.78; letter-spacing:-.03em; margin:0 0 18px; color:var(--cream); }
+.foot__row{
+  display:flex; justify-content:space-between; align-items:center; gap:14px 24px; flex-wrap:wrap;
+  font-family:var(--f-mono); font-size:.76rem; text-transform:uppercase; letter-spacing:.05em;
+  padding-top:16px; border-top:1px solid rgba(255,253,247,.28);
 }
+.foot__links{ display:flex; gap:20px; }
+.foot__links a{ transition:color .2s ease; }
+.foot__links a:hover{ color:var(--orange); }
+.foot__base{ margin-top:13px; font-family:var(--f-mono); font-size:.7rem; letter-spacing:.05em; opacity:.62; }
 
 /* ---------- Motion ------------------------------------------------------- */
 @keyframes drop{

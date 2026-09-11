@@ -43,9 +43,11 @@
   <a class="hero__label hero__label--br" href="#lookbook">Scroll ↓</a>
 </main>
 
-<!-- CONTEXT — scroll-scrubbed word reveal (placeholder copy — edit freely) -->
-<section class="context">
-  <p class="reveal-text" data-reveal>IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
+<!-- QUOTE — scroll to read it in, then it clears away into the cards -->
+<section class="quote" id="quote">
+  <div class="quote__sticky">
+    <p class="quote__text" id="quoteText">IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
+  </div>
 </section>
 
 <!-- LOOKBOOK — scroll-driven sticky card stack, CTA on every card -->
@@ -81,8 +83,22 @@
 
 <!-- FOOTER — minimal for now (per your note) -->
 <footer class="foot">
-  <span>© <span id="year"></span> IRAAYA</span>
-  <span>Launching 2026</span>
+  <div class="popart">
+    <img class="popart__img" src="assets/popart-hero.png" alt="" />
+    <div class="foot__scrim"></div>
+    <div class="foot__content">
+      <div class="foot__word">IRAAYA</div>
+      <div class="foot__row">
+        <span>For all that, you are — launching 2026</span>
+        <nav class="foot__links">
+          <a href="#">Instagram ↗</a>
+          <a href="#">TikTok ↗</a>
+          <a href="mailto:hello@iraaya.club">Contact ↗</a>
+        </nav>
+      </div>
+      <div class="foot__base">© <span id="year"></span> IRAAYA — All looks reserved</div>
+    </div>
+  </div>
 </footer>
 
 <script>
@@ -110,16 +126,27 @@
     pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
   });
 
-  // ---- word reveal on enter (robust: visible by default; animates in once) ----
-  document.querySelectorAll('[data-reveal]').forEach(el => {
-    const parts = el.textContent.trim().split(/\s+/);
-    el.innerHTML = parts.map((w,i) => `<span class="w" style="--i:${i}">${w} </span>`).join('');
-    el.classList.add('js-reveal');
-    const io = new IntersectionObserver(ents => {
-      ents.forEach(e => { if (e.isIntersecting){ el.classList.add('in'); io.disconnect(); } });
-    }, { threshold:0.3 });
-    io.observe(el);
-  });
+  // ---- quote: scroll-scrubbed read-in, then clears away ----
+  const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+  const quoteSec = document.getElementById('quote');
+  const quoteEl = document.getElementById('quoteText');
+  let qWords = [];
+  if (quoteEl){
+    qWords = quoteEl.textContent.trim().split(/\s+/).map(word => {
+      const s = document.createElement('span'); s.className = 'w'; s.textContent = word + ' '; return s;
+    });
+    quoteEl.textContent = ''; qWords.forEach(s => quoteEl.appendChild(s));
+  }
+  function quoteTick(){
+    if (!quoteSec || !quoteEl) return;
+    const total = quoteSec.offsetHeight - innerHeight;
+    const p = clamp(-quoteSec.getBoundingClientRect().top / (total || 1), 0, 1);
+    const rp = clamp(p / 0.5, 0, 1) * qWords.length;          // read-in over first half
+    qWords.forEach((w,i) => { w.style.opacity = (0.14 + 0.86*clamp(rp - i, 0, 1)).toFixed(3); });
+    const ep = clamp((p - 0.68) / 0.28, 0, 1);                 // clear away near the end
+    quoteEl.style.transform = `translateY(${(-ep*46).toFixed(1)}px)`;
+    quoteEl.style.opacity = (1 - ep).toFixed(3);
+  }
 
   // ---- scroll-driven sticky card stack (vanilla; iOS-safe) ----
   const stack = document.querySelector('.stack');
@@ -150,10 +177,10 @@
   }
 
   let ticking = false;
-  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { quoteTick(); stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
   addEventListener('scroll', onScroll, { passive:true });
-  addEventListener('resize', () => { stackTick(); parallaxTick(); drawAllPixels(); });
-  stackTick(); parallaxTick();
+  addEventListener('resize', () => { quoteTick(); stackTick(); parallaxTick(); drawAllPixels(); });
+  quoteTick(); stackTick(); parallaxTick();
 
   // buttery smooth scroll (Lenis if it loaded; native scroll otherwise)
   if (window.Lenis && matchMedia('(prefers-reduced-motion: no-preference)').matches){
