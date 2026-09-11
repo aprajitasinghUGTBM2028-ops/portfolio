@@ -152,6 +152,38 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   object-fit:cover; object-position:50% 30%; will-change:transform;
 }
 
+/* ---------- Dress-up game ----------------------------------------------- */
+.game{ padding:clamp(50px,8vw,100px) 22px; }
+.game__hint{ color:var(--ink-2); font-size:.96rem; margin:.5em 0 0; }
+.game__wrap{
+  display:flex; gap:clamp(24px,5vw,64px); align-items:flex-start; justify-content:center;
+  max-width:1080px; margin:clamp(32px,5vw,56px) auto 0; flex-wrap:wrap;
+}
+.game__stage{ position:relative; flex:none; }
+.doll{
+  height:clamp(380px,58vh,560px); width:auto; display:block;
+  user-select:none; -webkit-user-drag:none; pointer-events:none;
+  filter:drop-shadow(0 22px 30px rgba(23,20,15,.28));
+}
+.worn{ position:absolute; transform:translate(-50%,-50%); cursor:grab; touch-action:none; user-select:none; -webkit-user-drag:none; filter:drop-shadow(0 6px 10px rgba(23,20,15,.22)); }
+.worn.grab{ cursor:grabbing; }
+.game__side{ display:flex; flex-direction:column; gap:16px; width:min(360px,92vw); }
+.game__tray{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.tray__item{
+  background:var(--paper); border:1.5px solid var(--ink); border-radius:12px; aspect-ratio:1; padding:7px;
+  cursor:pointer; display:grid; place-items:center; transition:transform .15s ease, background .15s ease, border-color .15s ease;
+}
+.tray__item img{ max-width:100%; max-height:100%; object-fit:contain; pointer-events:none; }
+.tray__item:hover{ transform:translateY(-2px); }
+.tray__item.on{ background:var(--orange); border-color:var(--orange); box-shadow:0 8px 18px -8px rgba(228,99,28,.6); }
+.game__reset{
+  font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.08em; font-size:.7rem;
+  background:var(--ink); color:var(--paper); border:1.5px solid var(--ink); border-radius:999px;
+  padding:11px 18px; cursor:pointer; align-self:flex-start; transition:background .2s ease;
+}
+.game__reset:hover{ background:var(--orange); border-color:var(--orange); }
+@media (max-width:720px){ .game__wrap{ flex-direction:column; align-items:center; } }
+
 /* ---------- Footer — bleeding pop-art with parallax --------------------- */
 .foot{ position:relative; }
 .foot .popart{ height:min(84vh,700px); border:0; border-top:1.5px solid var(--ink); background:var(--ink); }

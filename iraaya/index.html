@@ -82,6 +82,33 @@
 </section>
 
 <!-- FOOTER — minimal for now (per your note) -->
+<!-- DRESS-UP GAME -->
+<section class="game" id="dressup">
+  <div class="look__head">
+    <span class="eyebrow">Play · Y2K</span>
+    <h2>Dress her up</h2>
+    <p class="game__hint">Tap a piece to put it on — drag it on her to adjust.</p>
+  </div>
+  <div class="game__wrap">
+    <div class="game__stage" id="stage">
+      <img class="doll" src="assets/game/base.png" alt="Dress-up doll" draggable="false" />
+    </div>
+    <div class="game__side">
+      <div class="game__tray" id="tray">
+        <button class="tray__item" data-item="tee"><img src="assets/game/tee.png" alt="Baby tee" /></button>
+        <button class="tray__item" data-item="halter"><img src="assets/game/halter.png" alt="Butterfly halter" /></button>
+        <button class="tray__item" data-item="cargo"><img src="assets/game/cargo.png" alt="Cargo pants" /></button>
+        <button class="tray__item" data-item="denimskirt"><img src="assets/game/denimskirt.png" alt="Denim mini skirt" /></button>
+        <button class="tray__item" data-item="plaidskirt"><img src="assets/game/plaidskirt.png" alt="Plaid mini skirt" /></button>
+        <button class="tray__item" data-item="platforms"><img src="assets/game/platforms.png" alt="Platform sneakers" /></button>
+        <button class="tray__item" data-item="bag"><img src="assets/game/bag.png" alt="Baguette bag" /></button>
+        <button class="tray__item" data-item="sunglasses"><img src="assets/game/sunglasses.png" alt="Tinted sunglasses" /></button>
+      </div>
+      <button class="game__reset" id="gameReset">Reset the look</button>
+    </div>
+  </div>
+</section>
+
 <footer class="foot">
   <div class="popart">
     <img class="popart__img" src="assets/popart-hero.png" alt="" />
@@ -249,6 +276,56 @@
       joinedAll();
     });
   });
+
+  // ---- dress-up game ----
+  (function(){
+    const stage = document.getElementById('stage');
+    const tray = document.getElementById('tray');
+    const resetBtn = document.getElementById('gameReset');
+    if (!stage || !tray) return;
+    const cfg = {
+      tee:{top:27,left:50,width:42,z:2}, halter:{top:28,left:50,width:40,z:2},
+      cargo:{top:66,left:50,width:44,z:1}, denimskirt:{top:47,left:50,width:46,z:1},
+      plaidskirt:{top:48,left:50,width:50,z:1}, platforms:{top:94,left:50,width:40,z:1},
+      bag:{top:52,left:75,width:23,z:3}, sunglasses:{top:10.5,left:50,width:22,z:4}
+    };
+    const placed = {};
+    function place(name){
+      const c = cfg[name]; if (!c) return;
+      const src = tray.querySelector('.tray__item[data-item="' + name + '"] img').src;
+      const el = document.createElement('img');
+      el.src = src; el.className = 'worn'; el.draggable = false;
+      el.style.left = c.left+'%'; el.style.top = c.top+'%'; el.style.width = c.width+'%'; el.style.zIndex = c.z;
+      stage.appendChild(el); placed[name] = el; drag(el, name);
+    }
+    function drop(name){ if (placed[name]){ placed[name].remove(); delete placed[name]; } }
+    tray.querySelectorAll('.tray__item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const n = btn.dataset.item;
+        if (placed[n]){ drop(n); btn.classList.remove('on'); }
+        else { place(n); btn.classList.add('on'); }
+      });
+    });
+    resetBtn && resetBtn.addEventListener('click', () => {
+      Object.keys(placed).forEach(drop);
+      tray.querySelectorAll('.tray__item.on').forEach(b => b.classList.remove('on'));
+    });
+    function drag(el, name){
+      let on=false, sx=0, sy=0, ox=0, oy=0;
+      el.addEventListener('pointerdown', e => {
+        on=true; el.setPointerCapture(e.pointerId); el.classList.add('grab'); el.style.zIndex=30;
+        const r=stage.getBoundingClientRect(); sx=e.clientX; sy=e.clientY;
+        ox=parseFloat(el.style.left)/100*r.width; oy=parseFloat(el.style.top)/100*r.height;
+      });
+      el.addEventListener('pointermove', e => {
+        if(!on) return; const r=stage.getBoundingClientRect();
+        el.style.left=((ox+e.clientX-sx)/r.width*100)+'%';
+        el.style.top=((oy+e.clientY-sy)/r.height*100)+'%';
+      });
+      function end(){ on=false; el.classList.remove('grab'); el.style.zIndex=cfg[name].z; }
+      el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+    }
+  })();
 </script>
 </body>
 </html>
