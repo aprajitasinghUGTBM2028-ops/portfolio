@@ -20,7 +20,7 @@
   <a class="hdr__brand" href="#top"><img src="assets/logo-mark.png" alt="" /> IRAAYA</a>
   <nav class="hdr__nav">
     <a class="nav-link" href="#lookbook">Lookbook</a>
-    <a class="btn" href="#lookbook">Join the list</a>
+    <button class="btn" type="button" data-join>Join the list</button>
   </nav>
 </header>
 
@@ -59,21 +59,21 @@
       <div class="pcard__media">
         <img class="pcard__img" src="assets/y2k.png" alt="Y2K look" loading="lazy" />
         <canvas class="pcard__pixel" aria-hidden="true"></canvas>
-        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+        <button class="pcta" type="button" data-join>Join the list →</button>
       </div>
     </figure></div>
     <div class="scard"><figure class="pcard">
       <div class="pcard__media">
         <img class="pcard__img" src="assets/dayout.png" alt="Day-out look" loading="lazy" />
         <canvas class="pcard__pixel" aria-hidden="true"></canvas>
-        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+        <button class="pcta" type="button" data-join>Join the list →</button>
       </div>
     </figure></div>
     <div class="scard"><figure class="pcard">
       <div class="pcard__media">
         <img class="pcard__img" src="assets/office.png" alt="Office look" loading="lazy" />
         <canvas class="pcard__pixel" aria-hidden="true"></canvas>
-        <form class="pcta"><input type="email" placeholder="Join the list →" aria-label="Email address" required /><button type="submit" aria-label="Join the list">→</button></form>
+        <button class="pcta" type="button" data-join>Join the list →</button>
       </div>
     </figure></div>
   </div>
@@ -128,6 +128,23 @@
   </div>
 </footer>
 
+<!-- JOIN MODAL — name + email -->
+<div class="modal" id="joinModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal__x" type="button" data-close aria-label="Close">×</button>
+    <span class="eyebrow">The list</span>
+    <h3 class="modal__title" id="modalTitle">Join the waitlist</h3>
+    <p class="modal__sub">Be first to the drop in 2026. No spam — one note when we open.</p>
+    <form class="modal__form" id="joinForm" novalidate>
+      <label class="modal__field"><span>Name</span><input type="text" id="joinName" name="name" placeholder="Your name" autocomplete="name" required /></label>
+      <label class="modal__field"><span>Email</span><input type="email" id="joinEmail" name="email" placeholder="you@email.com" autocomplete="email" inputmode="email" required /></label>
+      <button class="modal__submit" type="submit">Join the list →</button>
+      <p class="modal__note" id="joinNote" role="status"></p>
+    </form>
+  </div>
+</div>
+
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -153,15 +170,25 @@
     pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
   });
 
-  // ---- quote: felt word-by-word reveal on enter (compact — no pinning, no empty) ----
+  // ---- quote: scroll-linked word reveal (compact + reversible — reveals down, re-dims up) ----
   const quoteSec = document.getElementById('quote');
   const quoteEl = document.getElementById('quoteText');
-  if (quoteEl && quoteSec){
-    const parts = quoteEl.textContent.trim().split(/\s+/);
-    quoteEl.innerHTML = parts.map((w,i) => `<span class="w" style="--i:${i}">${w} </span>`).join('');
-    quoteSec.classList.add('js');
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ quoteSec.classList.add('in'); io.disconnect(); } }), { threshold:0.35 });
-    io.observe(quoteSec);
+  let qWords = [];
+  if (quoteEl){
+    qWords = quoteEl.textContent.trim().split(/\s+/).map(word => {
+      const s = document.createElement('span'); s.className = 'w'; s.textContent = word + ' '; return s;
+    });
+    quoteEl.textContent = ''; qWords.forEach(s => quoteEl.appendChild(s));
+  }
+  function quoteTick(){
+    if (!quoteSec || !qWords.length) return;
+    const r = quoteSec.getBoundingClientRect();
+    const center = r.top + r.height/2;
+    const p = Math.min(Math.max((innerHeight*0.9 - center) / (innerHeight*0.5), 0), 1);
+    const rp = p * qWords.length;
+    for (let i = 0; i < qWords.length; i++){
+      qWords[i].style.opacity = (0.13 + 0.87*Math.min(Math.max((rp - i)*0.85, 0), 1)).toFixed(3);
+    }
   }
 
   // ---- scroll-driven sticky card stack (vanilla; iOS-safe) ----
@@ -187,16 +214,16 @@
     if (!paImg || !paSec) return;
     const r = paSec.getBoundingClientRect();
     const prog = (r.top + r.height/2 - innerHeight/2) / innerHeight;
-    const room = paSec.offsetHeight * 0.14;
-    const ty = Math.max(-room, Math.min(room, -prog * room));
+    const room = paSec.offsetHeight * 0.2;
+    const ty = Math.max(-room, Math.min(room, -prog * room * 1.3));
     paImg.style.transform = `translateY(${ty.toFixed(1)}px)`;
   }
 
   let ticking = false;
-  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { quoteTick(); stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
   addEventListener('scroll', onScroll, { passive:true });
-  addEventListener('resize', () => { stackTick(); parallaxTick(); drawAllPixels(); });
-  stackTick(); parallaxTick();
+  addEventListener('resize', () => { quoteTick(); stackTick(); parallaxTick(); drawAllPixels(); });
+  quoteTick(); stackTick(); parallaxTick();
 
   // buttery smooth scroll (Lenis if it loaded; native scroll otherwise)
   if (window.Lenis && matchMedia('(prefers-reduced-motion: no-preference)').matches){
@@ -248,22 +275,39 @@
     else img.addEventListener('load', () => drawPixel(card));
   });
 
-  // ---- waitlist on every card CTA (demo — remembers locally) ----
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  function joinedAll(){
-    document.querySelectorAll('.pcta').forEach(p => {
-      p.innerHTML = '<span class="pcta__done">You’re on the list ✦</span>';
-    });
-  }
-  try { if (localStorage.getItem('iraaya-joined')) joinedAll(); } catch (e) {}
-  document.querySelectorAll('.pcta').forEach(form => {
-    form.addEventListener('submit', ev => {
-      ev.preventDefault();
-      const input = form.querySelector('input'); const v = input.value.trim();
-      if (!valid.test(v)){ input.focus(); form.classList.add('err'); setTimeout(() => form.classList.remove('err'), 1000); return; }
-      try { localStorage.setItem('iraaya-joined', v); } catch (e) {}
-      joinedAll();
-    });
+  // ---- join modal (collects NAME + EMAIL) ----
+  const modal = document.getElementById('joinModal');
+  const joinForm = document.getElementById('joinForm');
+  const joinName = document.getElementById('joinName');
+  const joinEmail = document.getElementById('joinEmail');
+  const joinNote = document.getElementById('joinNote');
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // >>> Paste your Google Apps Script (or Formspree) endpoint URL here to save submissions to a sheet. Empty = demo only.
+  const JOIN_ENDPOINT = '';
+  let lastFocus = null;
+  function openModal(){ lastFocus = document.activeElement; modal.hidden = false; document.body.style.overflow = 'hidden'; setTimeout(() => joinName.focus(), 60); }
+  function closeModal(){ modal.hidden = true; document.body.style.overflow = ''; joinNote.textContent = ''; joinNote.className = 'modal__note'; if (lastFocus) lastFocus.focus(); }
+  document.querySelectorAll('[data-join]').forEach(b => b.addEventListener('click', openModal));
+  modal.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+  joinForm.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const name = joinName.value.trim(), email = joinEmail.value.trim();
+    if (name.length < 2){ joinNote.textContent = 'Please add your name.'; joinNote.className = 'modal__note is-err'; joinName.focus(); return; }
+    if (!validEmail.test(email)){ joinNote.textContent = 'That email looks off — mind checking it?'; joinNote.className = 'modal__note is-err'; joinEmail.focus(); return; }
+    const btn = joinForm.querySelector('.modal__submit');
+    const done = () => {
+      joinNote.textContent = "You’re on the list ✦ see you at the drop."; joinNote.className = 'modal__note is-good';
+      joinForm.reset(); btn.disabled = false; btn.textContent = 'Join the list →';
+      try { localStorage.setItem('iraaya-joined', email); } catch (e) {}
+      setTimeout(closeModal, 1500);
+    };
+    if (JOIN_ENDPOINT){
+      btn.disabled = true; btn.textContent = 'Joining…';
+      fetch(JOIN_ENDPOINT, { method:'POST', body:new URLSearchParams({ name, email }) })
+        .then(r => { if (r.ok) done(); else throw 0; })
+        .catch(() => { joinNote.textContent = "Hmm, that didn’t send — try again."; joinNote.className = 'modal__note is-err'; btn.disabled = false; btn.textContent = 'Join the list →'; });
+    } else { done(); }
   });
 
   // ---- dress-up game ----

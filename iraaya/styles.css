@@ -50,7 +50,7 @@ a{ color:inherit; text-decoration:none; }
 .hero{
   position:relative; overflow:hidden; text-align:center; min-height:auto;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-  padding:0 22px clamp(34px,6vh,58px);
+  padding:0 22px clamp(58px,8vh,82px);
 }
 .hero__label{
   position:absolute; z-index:4; font-family:var(--f-mono); font-size:.7rem; line-height:1.5;
@@ -87,10 +87,8 @@ a{ color:inherit; text-decoration:none; }
   font-size:clamp(2rem,6vw,4rem); line-height:1.14; letter-spacing:-.03em;
   max-width:17ch; margin:0; text-align:center; color:var(--ink);
 }
-/* felt word-by-word reveal on enter; fully visible without JS */
-.quote__text .w{ display:inline-block; }
-.quote.js .quote__text .w{ opacity:0; transform:translateY(.45em); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1); transition-delay:calc(var(--i,0) * 60ms); }
-.quote.js.in .quote__text .w{ opacity:1; transform:none; }
+/* scroll-linked word reveal — JS scrubs opacity (reversible) */
+.quote__text .w{ display:inline-block; opacity:.13; transition:opacity .12s linear; }
 
 /* ---------- Lookbook: floats on the aurora, sticky scroll stack --------- */
 .look__head{ text-align:center; padding:clamp(16px,3vw,40px) 22px 0; }
@@ -106,25 +104,47 @@ a{ color:inherit; text-decoration:none; }
 .pcard__pixel{ position:absolute; inset:0; width:100%; height:100%; opacity:0; pointer-events:none; }
 .pcard:hover .pcard__pixel{ animation:pxflash .55s ease-out; }
 
-/* email CTA — sleek frosted pill, centred on the polaroid */
+/* CTA button on the polaroid — opens the join modal */
 .pcta{
   position:absolute; left:50%; transform:translateX(-50%); bottom:14px; z-index:3;
-  width:min(84%,242px); display:flex; align-items:center; gap:5px;
-  background:rgba(255,253,247,.74); backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,.7); border-radius:999px;
-  padding:4px 4px 4px 15px; box-shadow:0 12px 26px -12px rgba(23,20,15,.55);
-  transition:box-shadow .2s ease;
+  width:min(84%,244px); padding:12px 16px; border:1px solid rgba(255,255,255,.7); border-radius:999px;
+  background:rgba(255,253,247,.82); backdrop-filter:blur(10px); box-shadow:0 12px 26px -12px rgba(23,20,15,.55);
+  font-family:var(--f-mono); font-weight:700; font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);
+  cursor:pointer; transition:background .2s ease, color .2s ease, transform .2s ease;
 }
-.pcta.err{ box-shadow:0 0 0 2px #d24; }
-.pcta input{ flex:1; min-width:0; border:0; background:transparent; font:inherit; font-size:.84rem; color:var(--ink); outline:none; }
-.pcta input::placeholder{ color:#7d7f8c; }
-.pcta button{
-  flex:none; width:32px; height:32px; border:0; border-radius:50%; cursor:pointer;
-  background:var(--ink); color:var(--paper); font-size:1rem; line-height:1;
-  display:grid; place-items:center; transition:background .2s ease, transform .2s ease;
+.pcta:hover{ background:var(--ink); color:var(--paper); transform:translateX(-50%) translateY(-2px); }
+
+/* ---------- Join modal ---------------------------------------------------- */
+.modal{ position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:22px; }
+.modal__backdrop{ position:absolute; inset:0; background:rgba(23,20,15,.55); backdrop-filter:blur(4px); animation:fade .25s ease; }
+.modal__box{
+  position:relative; z-index:1; width:min(400px,100%); background:var(--paper); color:var(--ink);
+  border:1.5px solid var(--ink); border-radius:18px; padding:clamp(24px,5vw,34px);
+  box-shadow:0 30px 60px -20px rgba(23,20,15,.6); animation:pop .3s cubic-bezier(.2,.9,.3,1.05);
 }
-.pcta button:hover{ background:var(--orange); color:var(--ink); transform:scale(1.1); }
-.pcta__done{ width:100%; text-align:center; font-weight:600; color:var(--orange-2); font-size:.86rem; padding:8px 0; }
+.modal__x{ position:absolute; top:14px; right:16px; width:32px; height:32px; border:0; background:transparent; font-size:1.5rem; line-height:1; color:var(--ink-2); cursor:pointer; border-radius:50%; }
+.modal__x:hover{ background:rgba(23,20,15,.08); color:var(--ink); }
+.modal__title{ font-family:var(--f-disp); font-weight:800; font-size:clamp(1.6rem,5vw,2.1rem); letter-spacing:-.02em; margin:.35em 0 .2em; }
+.modal__sub{ color:var(--ink-2); font-size:.95rem; margin:0 0 20px; line-height:1.5; }
+.modal__form{ display:flex; flex-direction:column; gap:12px; }
+.modal__field{ display:flex; flex-direction:column; gap:6px; }
+.modal__field span{ font-family:var(--f-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-2); }
+.modal__field input{
+  padding:13px 15px; border:1.5px solid var(--ink); border-radius:11px; background:#fff;
+  color:var(--ink); font-family:var(--f); font-size:1rem;
+}
+.modal__field input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); }
+.modal__submit{
+  margin-top:6px; padding:14px 18px; border:1.5px solid var(--ink); border-radius:11px; cursor:pointer;
+  background:var(--ink); color:var(--paper); font-family:var(--f-mono); font-weight:700; font-size:.82rem; letter-spacing:.06em; text-transform:uppercase;
+  transition:background .2s ease, transform .2s ease, border-color .2s ease;
+}
+.modal__submit:hover{ background:var(--orange); border-color:var(--orange); transform:translateY(-2px); }
+.modal__note{ margin:6px 0 0; font-size:.85rem; text-align:center; color:var(--ink-2); min-height:1.1em; }
+.modal__note.is-good{ color:var(--orange-2); font-weight:600; }
+.modal__note.is-err{ color:#c0392b; }
+@keyframes fade{ from{ opacity:0 } to{ opacity:1 } }
+@keyframes pop{ from{ opacity:0; transform:translateY(16px) scale(.97) } to{ opacity:1; transform:none } }
 
 /* ---------- Atmosphere (grain · glow · drifting sparkles) ---------------- */
 .grain{
@@ -150,7 +170,7 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   border-block:1.5px solid rgba(23,20,15,.14);
 }
 .popart__img{
-  position:absolute; top:-15%; left:0; width:100%; height:130%;
+  position:absolute; top:-22%; left:0; width:100%; height:144%;
   object-fit:cover; object-position:50% 30%; will-change:transform;
 }
 
@@ -237,7 +257,7 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 
 /* ---------- Mobile (phone-first tightening) ----------------------------- */
 @media (max-width:680px){
-  .hero{ padding-bottom:36px; }
+  .hero{ padding-bottom:66px; }
   .hero__label--tl, .hero__label--tr{ display:none; }        /* corner labels clutter small screens */
   .hero__label--bl, .hero__label--br{ bottom:18px; font-size:.64rem; }
   .hero__display{ font-size:clamp(2.2rem,11vw,3.1rem); margin-top:8px; }
