@@ -178,9 +178,21 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 /* ---------- Dress-up game ----------------------------------------------- */
 .game{ padding:clamp(24px,4vw,56px) 22px clamp(50px,8vw,90px); }
 .game__hint{ color:var(--ink-2); font-size:.96rem; margin:.5em 0 0; }
+.silo{ display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:clamp(22px,3.5vw,36px); }
+.silo__step{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.14em; font-size:.7rem; color:var(--ink-2); }
+.silo__opts{ display:flex; gap:clamp(10px,2vw,16px); }
+.silo__opt{
+  display:flex; flex-direction:column; align-items:center; gap:6px; padding:9px 12px 7px; cursor:pointer;
+  background:var(--paper); border:1.5px solid rgba(23,20,15,.12); border-radius:16px;
+  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.08em; font-size:.62rem; color:var(--ink-2);
+}
+.silo__opt img{ width:52px; height:78px; object-fit:contain; object-position:top center; pointer-events:none; }
+.silo__opt:hover{ border-color:var(--orange); transform:translateY(-2px); }
+.silo__opt.is-on{ border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); color:var(--ink); }
 .game__wrap{
   display:flex; gap:clamp(24px,5vw,64px); align-items:flex-start; justify-content:center;
-  max-width:1080px; margin:clamp(32px,5vw,56px) auto 0; flex-wrap:wrap;
+  max-width:1080px; margin:clamp(24px,4vw,44px) auto 0; flex-wrap:wrap;
 }
 .game__stage{ position:relative; flex:none; }
 .doll{

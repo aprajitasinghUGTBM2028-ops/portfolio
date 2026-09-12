@@ -45,7 +45,7 @@
 
 <!-- QUOTE — scroll to read it in, then it clears away into the cards -->
 <section class="quote" id="quote">
-  <p class="quote__text" id="quoteText">IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
+  <p class="quote__text" id="quoteText">Meet IRAAYA — your AI personal stylist, built around your body, your taste, and the moment you’re dressing for.</p>
 </section>
 
 <!-- LOOKBOOK — scroll-driven sticky card stack, CTA on every card -->
@@ -85,15 +85,23 @@
   <div class="look__head">
     <span class="eyebrow">While you wait</span>
     <h2>Style her up</h2>
-    <p class="game__hint">The first drop lands 2026 — until then, build a look, screenshot it, and tag&nbsp;@iraaya.</p>
+    <p class="game__hint">The first drop lands 2026 — until then, pick a silhouette, build a look, screenshot it, and tag&nbsp;@iraaya.</p>
+  </div>
+  <div class="silo">
+    <span class="silo__step">1 · Pick your silhouette</span>
+    <div class="silo__opts" id="silo">
+      <button class="silo__opt is-on" type="button" data-body="slim" aria-pressed="true"><img src="assets/game/base.png" alt="" /><span>Slim</span></button>
+      <button class="silo__opt" type="button" data-body="pear" aria-pressed="false"><img src="assets/game/base-pear.png" alt="" /><span>Pear</span></button>
+      <button class="silo__opt" type="button" data-body="straight" aria-pressed="false"><img src="assets/game/base-square.png" alt="" /><span>Straight</span></button>
+    </div>
   </div>
   <div class="game__wrap">
     <div class="game__stage" id="stage">
-      <img class="doll" src="assets/game/base.png" alt="Dress-up doll" draggable="false" />
+      <img class="doll" id="doll" src="assets/game/base.png" alt="Dress-up doll" draggable="false" />
     </div>
     <div class="game__side">
       <div class="game__tray-head">
-        <span class="game__tray-label">The rack</span>
+        <span class="game__tray-label">2 · The rack</span>
         <button class="game__reset" id="gameReset">Reset</button>
       </div>
       <div class="game__tray" id="tray">
@@ -370,11 +378,25 @@
         else { place(nm); btn.classList.add('on'); select(placed[nm]); }
       });
     });
-    resetBtn && resetBtn.addEventListener('click', () => {
+    function clearLook(){
       Object.keys(placed).slice().forEach(drop);
       tray.querySelectorAll('.tray__item.on').forEach(b => b.classList.remove('on'));
-    });
+    }
+    resetBtn && resetBtn.addEventListener('click', clearLook);
     stage.addEventListener('pointerdown', e => { if (e.target === stage) deselect(); });
+
+    // silhouette picker — swap the body, then reset the look so clothes re-fit
+    const doll = document.getElementById('doll');
+    const silo = document.getElementById('silo');
+    silo && silo.querySelectorAll('.silo__opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (opt.classList.contains('is-on')) return;
+        silo.querySelectorAll('.silo__opt').forEach(o => { o.classList.remove('is-on'); o.setAttribute('aria-pressed','false'); });
+        opt.classList.add('is-on'); opt.setAttribute('aria-pressed','true');
+        doll.src = opt.querySelector('img').src; // reuse the (inlined) thumbnail src
+        clearLook();
+      });
+    });
 
     function drag(el, name){
       let on=false, sx=0, sy=0, ox=0, oy=0, moved=false;
