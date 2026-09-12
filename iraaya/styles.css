@@ -178,18 +178,25 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 /* ---------- Dress-up game ----------------------------------------------- */
 .game{ padding:clamp(24px,4vw,56px) 22px clamp(50px,8vw,90px); }
 .game__hint{ color:var(--ink-2); font-size:.96rem; margin:.5em 0 0; }
-.silo{ display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:clamp(22px,3.5vw,36px); }
-.silo__step{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.14em; font-size:.7rem; color:var(--ink-2); }
-.silo__opts{ display:flex; gap:clamp(10px,2vw,16px); }
+.silo{ display:flex; flex-direction:column; align-items:center; gap:15px; margin-top:clamp(22px,3.5vw,36px); }
+.silo__step{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.2em; font-size:.66rem; color:var(--ink-2); opacity:.7; }
+.silo__opts{ display:flex; gap:clamp(22px,6vw,56px); align-items:flex-end; }
 .silo__opt{
-  display:flex; flex-direction:column; align-items:center; gap:6px; padding:9px 12px 7px; cursor:pointer;
-  background:var(--paper); border:1.5px solid rgba(23,20,15,.12); border-radius:16px;
-  transition:border-color .2s ease, transform .2s ease, box-shadow .2s ease;
-  font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.08em; font-size:.62rem; color:var(--ink-2);
+  display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer;
+  background:none; border:0; padding:0; opacity:.38;
+  transition:opacity .25s ease, transform .25s ease;
 }
-.silo__opt img{ width:52px; height:78px; object-fit:contain; object-position:top center; pointer-events:none; }
-.silo__opt:hover{ border-color:var(--orange); transform:translateY(-2px); }
-.silo__opt.is-on{ border-color:var(--orange); box-shadow:0 0 0 3px rgba(228,99,28,.16); color:var(--ink); }
+.silo__opt img{ width:clamp(56px,15vw,74px); height:auto; object-fit:contain; pointer-events:none;
+  filter:drop-shadow(0 8px 12px rgba(23,20,15,.16)); }
+.silo__opt span{
+  font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.64rem; color:var(--ink);
+  padding-bottom:5px; border-bottom:1.5px solid transparent; transition:color .2s ease, border-color .2s ease;
+}
+.silo__opt:hover{ opacity:.82; transform:translateY(-3px); }
+.silo__opt.is-on{ opacity:1; }
+.silo__opt.is-on span{ color:var(--orange); border-bottom-color:var(--orange); }
+.game__hint a{ color:var(--orange); text-decoration:none; border-bottom:1px solid currentColor; padding-bottom:1px; transition:opacity .2s ease; }
+.game__hint a:hover{ opacity:.7; }
 .game__wrap{
   display:flex; gap:clamp(24px,5vw,64px); align-items:flex-start; justify-content:center;
   max-width:1080px; margin:clamp(24px,4vw,44px) auto 0; flex-wrap:wrap;
