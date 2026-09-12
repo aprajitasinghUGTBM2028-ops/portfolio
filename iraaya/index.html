@@ -282,8 +282,8 @@
   const joinEmail = document.getElementById('joinEmail');
   const joinNote = document.getElementById('joinNote');
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // >>> Paste your Google Apps Script (or Formspree) endpoint URL here to save submissions to a sheet. Empty = demo only.
-  const JOIN_ENDPOINT = '';
+  // Formspree endpoint — every Name + Email lands in your Formspree dashboard.
+  const JOIN_ENDPOINT = 'https://formspree.io/f/xkjnakyg';
   let lastFocus = null;
   function openModal(){ lastFocus = document.activeElement; modal.hidden = false; document.body.style.overflow = 'hidden'; setTimeout(() => joinName.focus(), 60); }
   function closeModal(){ modal.hidden = true; document.body.style.overflow = ''; joinNote.textContent = ''; joinNote.className = 'modal__note'; if (lastFocus) lastFocus.focus(); }
@@ -302,9 +302,11 @@
       try { localStorage.setItem('iraaya-joined', email); } catch (e) {}
       setTimeout(closeModal, 1500);
     };
-    if (JOIN_ENDPOINT){
+    // claude.ai preview sandbox blocks external POSTs, so demo-succeed there; the real POST runs on the live site.
+    const isPreview = /(^|\.)claude\.ai$|claudeusercontent|claude\.site/.test(location.hostname);
+    if (JOIN_ENDPOINT && !isPreview){
       btn.disabled = true; btn.textContent = 'Joining…';
-      fetch(JOIN_ENDPOINT, { method:'POST', body:new URLSearchParams({ name, email }) })
+      fetch(JOIN_ENDPOINT, { method:'POST', headers:{ 'Accept':'application/json' }, body:new URLSearchParams({ name, email }) })
         .then(r => { if (r.ok) done(); else throw 0; })
         .catch(() => { joinNote.textContent = "Hmm, that didn’t send — try again."; joinNote.className = 'modal__note is-err'; btn.disabled = false; btn.textContent = 'Join the list →'; });
     } else { done(); }
