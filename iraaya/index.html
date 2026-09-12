@@ -297,7 +297,7 @@
     if (!validEmail.test(email)){ joinNote.textContent = 'That email looks off — mind checking it?'; joinNote.className = 'modal__note is-err'; joinEmail.focus(); return; }
     const btn = joinForm.querySelector('.modal__submit');
     const done = () => {
-      joinNote.textContent = "You’re on the list ✦ see you at the drop."; joinNote.className = 'modal__note is-good';
+      joinNote.textContent = "thank you — you’re one of us now ✦ we’ll come find you before the drop."; joinNote.className = 'modal__note is-good';
       joinForm.reset(); btn.disabled = false; btn.textContent = 'Join the list →';
       try { localStorage.setItem('iraaya-joined', email); } catch (e) {}
       setTimeout(closeModal, 1500);
@@ -333,11 +333,8 @@
                    + '<button type="button" data-a="plus" aria-label="Bigger">+</button>'
                    + '<button type="button" data-a="del" aria-label="Remove">×</button>';
     stage.appendChild(ctrl);
-    function positionCtrl(el){
-      const er = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-      ctrl.style.left = (er.left - sr.left + er.width/2) + 'px';
-      ctrl.style.top = (er.top - sr.top - 6) + 'px';
-    }
+    // toolbar is pinned to the stage corner via CSS so it never covers the look
+    function positionCtrl(el){}
     function select(el){ if (selected) selected.classList.remove('sel'); selected = el; el.classList.add('sel'); ctrl.hidden = false; positionCtrl(el); }
     function deselect(){ if (selected) selected.classList.remove('sel'); selected = null; ctrl.hidden = true; }
     ctrl.addEventListener('click', e => {
