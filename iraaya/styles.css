@@ -192,17 +192,19 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 .worn.grab{ cursor:grabbing; }
 .worn.sel{ outline:2px dashed var(--orange); outline-offset:3px; border-radius:4px; }
 .worn-ctrl{
-  position:absolute; z-index:40; top:12px; right:12px;
-  display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; box-shadow:0 6px 14px -6px rgba(23,20,15,.5);
+  display:inline-flex; align-self:stretch; align-items:center; gap:6px;
+  background:var(--ink); border-radius:999px; padding:5px 6px; box-shadow:0 6px 14px -6px rgba(23,20,15,.5);
 }
-.worn-ctrl::before{
-  content:"size"; align-self:center; font-family:var(--f-mono); font-size:.58rem; letter-spacing:.12em;
-  text-transform:uppercase; color:var(--paper); opacity:.6; padding:0 6px 0 4px;
+.worn-ctrl[hidden]{ display:none; }
+.worn-ctrl .worn-ctrl__lbl{
+  flex:1; font-family:var(--f-mono); font-size:.6rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--paper); opacity:.7; padding-left:8px;
 }
 .worn-ctrl button{
-  width:28px; height:28px; border:0; border-radius:50%; background:var(--paper); color:var(--ink);
-  font-size:1.05rem; line-height:1; cursor:pointer; display:grid; place-items:center; font-family:var(--f);
+  width:30px; height:30px; border:0; border-radius:50%; background:var(--paper); color:var(--ink);
+  font-size:1.1rem; line-height:1; cursor:pointer; display:grid; place-items:center; font-family:var(--f); flex:none;
 }
+.worn-ctrl button[data-a="del"]{ background:var(--orange); color:var(--paper); }
 .worn-ctrl button:hover{ background:var(--orange); }
 .game__side{ display:flex; flex-direction:column; gap:12px; width:min(340px,92vw); }
 .game__tray-head{ display:flex; align-items:center; justify-content:space-between; padding-bottom:2px; }

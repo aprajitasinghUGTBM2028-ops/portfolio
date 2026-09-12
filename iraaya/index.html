@@ -329,13 +329,21 @@
 
     // resize (–/+) and remove (×) control
     const ctrl = document.createElement('div'); ctrl.className = 'worn-ctrl'; ctrl.hidden = true;
-    ctrl.innerHTML = '<button type="button" data-a="minus" aria-label="Smaller">–</button>'
+    ctrl.innerHTML = '<span class="worn-ctrl__lbl">Size</span>'
+                   + '<button type="button" data-a="minus" aria-label="Smaller">–</button>'
                    + '<button type="button" data-a="plus" aria-label="Bigger">+</button>'
                    + '<button type="button" data-a="del" aria-label="Remove">×</button>';
-    stage.appendChild(ctrl);
+    // controls live in the rack panel, never over the doll
+    const side = document.querySelector('.game__side');
+    side.insertBefore(ctrl, side.firstChild);
     // toolbar is pinned to the stage corner via CSS so it never covers the look
     function positionCtrl(el){}
-    function select(el){ if (selected) selected.classList.remove('sel'); selected = el; el.classList.add('sel'); ctrl.hidden = false; positionCtrl(el); }
+    const ctrlLbl = ctrl.querySelector('.worn-ctrl__lbl');
+    function select(el){
+      if (selected) selected.classList.remove('sel'); selected = el; el.classList.add('sel'); ctrl.hidden = false;
+      const t = tray.querySelector('.tray__item[data-item="' + el.dataset.name + '"] img');
+      ctrlLbl.textContent = t ? t.alt : 'Size';
+    }
     function deselect(){ if (selected) selected.classList.remove('sel'); selected = null; ctrl.hidden = true; }
     ctrl.addEventListener('click', e => {
       const a = e.target.dataset.a; if (!a || !selected) return;
