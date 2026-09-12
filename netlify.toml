@@ -1,0 +1,6 @@
+# Netlify: serve the Iraaya site at the domain root.
+# Static site, no build step — just publish the iraaya/ folder.
+[build]
+  base = "iraaya"
+  publish = "."
+  command = ""
