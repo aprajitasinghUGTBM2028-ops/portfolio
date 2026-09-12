@@ -7,7 +7,7 @@
 <meta name="description" content="IRAAYA — a new fashion house. Launching 2026. Join the list." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 </head>
@@ -85,15 +85,19 @@
 <!-- DRESS-UP GAME -->
 <section class="game" id="dressup">
   <div class="look__head">
-    <span class="eyebrow">Play · Y2K</span>
-    <h2>Dress her up</h2>
-    <p class="game__hint">Tap a piece to put it on — drag it on her to adjust.</p>
+    <span class="eyebrow">Get a sneak peek</span>
+    <h2>Style her up</h2>
+    <p class="game__hint">This is what IRAAYA does — tap a piece to try it on, drag to adjust.</p>
   </div>
   <div class="game__wrap">
     <div class="game__stage" id="stage">
       <img class="doll" src="assets/game/base.png" alt="Dress-up doll" draggable="false" />
     </div>
     <div class="game__side">
+      <div class="game__tray-head">
+        <span class="game__tray-label">The rack</span>
+        <button class="game__reset" id="gameReset">Reset</button>
+      </div>
       <div class="game__tray" id="tray">
         <button class="tray__item" data-item="tee"><img src="assets/game/tee.png" alt="Baby tee" /></button>
         <button class="tray__item" data-item="halter"><img src="assets/game/halter.png" alt="Butterfly halter" /></button>
@@ -104,7 +108,6 @@
         <button class="tray__item" data-item="bag"><img src="assets/game/bag.png" alt="Baguette bag" /></button>
         <button class="tray__item" data-item="sunglasses"><img src="assets/game/sunglasses.png" alt="Tinted sunglasses" /></button>
       </div>
-      <button class="game__reset" id="gameReset">Reset the look</button>
     </div>
   </div>
 </section>
@@ -119,7 +122,6 @@
         <span>For all that, you are — launching 2026</span>
         <nav class="foot__links">
           <a href="#">Instagram ↗</a>
-          <a href="#">TikTok ↗</a>
           <a href="mailto:hello@iraaya.club">Contact ↗</a>
         </nav>
       </div>
