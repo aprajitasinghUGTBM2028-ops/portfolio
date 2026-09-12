@@ -170,10 +170,10 @@
     if (!quoteSec || !quoteEl) return;
     const total = quoteSec.offsetHeight - innerHeight;
     const p = clamp(-quoteSec.getBoundingClientRect().top / (total || 1), 0, 1);
-    const rp = clamp(p / 0.5, 0, 1) * qWords.length;          // read-in over first half
-    qWords.forEach((w,i) => { w.style.opacity = (0.14 + 0.86*clamp(rp - i, 0, 1)).toFixed(3); });
-    const ep = clamp((p - 0.68) / 0.28, 0, 1);                 // clear away near the end
-    quoteEl.style.transform = `translateY(${(-ep*46).toFixed(1)}px)`;
+    const rp = clamp(p / 0.82, 0, 1) * qWords.length;         // read-in slowly over most of the scroll
+    qWords.forEach((w,i) => { w.style.opacity = (0.14 + 0.86*clamp((rp - i)*0.7, 0, 1)).toFixed(3); });
+    const ep = clamp((p - 0.9) / 0.1, 0, 1);                   // quick clear at the very end, into the cards
+    quoteEl.style.transform = `translateY(${(-ep*40).toFixed(1)}px)`;
     quoteEl.style.opacity = (1 - ep).toFixed(3);
   }
 

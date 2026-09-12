@@ -27,9 +27,11 @@ a{ color:inherit; text-decoration:none; }
 .hdr{
   position:fixed; top:0; left:0; right:0; z-index:30;
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px clamp(16px,4vw,40px); transition:background .3s ease, box-shadow .3s ease, padding .3s ease;
+  padding:14px clamp(16px,4vw,40px);
+  opacity:0; pointer-events:none;                 /* hidden on the hero so the logo hangs from a clean top edge */
+  transition:opacity .35s ease, background .3s ease, box-shadow .3s ease, padding .3s ease;
 }
-.hdr.scrolled{ padding-block:10px; background:rgba(250,246,238,.6); backdrop-filter:blur(10px) saturate(1.1); box-shadow:0 1px 0 rgba(23,20,15,.1); }
+.hdr.scrolled{ opacity:1; pointer-events:auto; padding-block:10px; background:rgba(250,246,238,.72); backdrop-filter:blur(10px) saturate(1.1); box-shadow:0 1px 0 rgba(23,20,15,.1); }
 .hdr__brand{ display:flex; align-items:center; gap:9px; font-family:var(--f-mono); font-weight:700; font-size:.9rem; letter-spacing:.14em; text-transform:uppercase; }
 .hdr__brand img{ width:23px; height:23px; object-fit:contain; }
 .hdr__nav{ display:flex; align-items:center; gap:clamp(16px,2.4vw,28px); }
@@ -79,10 +81,9 @@ a{ color:inherit; text-decoration:none; }
 .hero__display em{ font-style:normal; font-weight:800; color:var(--orange-2); }
 
 /* ---------- Quote: scroll-scrubbed read-in, then clears away ------------- */
-.quote{ position:relative; height:125vh; }
+.quote{ position:relative; height:165vh; }
 .quote__sticky{
-  position:sticky; top:0; height:100vh; display:flex; align-items:flex-start; justify-content:center;
-  padding:clamp(120px,22vh,240px) 26px 0;
+  position:sticky; top:0; height:100vh; display:flex; align-items:center; justify-content:center; padding:0 26px;
 }
 .quote__text{
   font-family:var(--f-disp); font-weight:700;
@@ -241,7 +242,7 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   .hero__label--bl, .hero__label--br{ bottom:18px; font-size:.64rem; }
   .hero__display{ font-size:clamp(2.2rem,11vw,3.1rem); margin-top:8px; }
   .hero__status{ margin-top:14px; }
-  .quote{ height:112vh; }
+  .quote{ height:145vh; }
   .quote__text{ font-size:clamp(1.75rem,8vw,2.4rem); }
   .look__head h2{ font-size:clamp(1.9rem,8vw,2.4rem); }
   .stack{ padding:1vh 18px 8vh; }
