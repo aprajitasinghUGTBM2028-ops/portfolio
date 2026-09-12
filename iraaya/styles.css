@@ -107,7 +107,7 @@ a{ color:inherit; text-decoration:none; }
 /* CTA button on the polaroid — opens the join modal */
 .pcta{
   position:absolute; left:50%; transform:translateX(-50%); bottom:14px; z-index:3;
-  width:min(84%,244px); padding:12px 16px; border:1px solid rgba(255,255,255,.7); border-radius:999px;
+  width:auto; padding:9px 20px; border:1px solid rgba(255,255,255,.7); border-radius:999px;
   background:rgba(255,253,247,.82); backdrop-filter:blur(10px); box-shadow:0 12px 26px -12px rgba(23,20,15,.55);
   font-family:var(--f-mono); font-weight:700; font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);
   cursor:pointer; transition:background .2s ease, color .2s ease, transform .2s ease;
