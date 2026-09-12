@@ -37,7 +37,7 @@
     </div>
   </div>
 
-  <h1 class="hero__display">For all that,<br /><em>you&nbsp;are.</em></h1>
+  <h1 class="hero__display">for all that,<br /><em>you&nbsp;are.</em></h1>
 
   <span class="hero__label hero__label--bl">N°01 — The&nbsp;debut · Coming&nbsp;2026</span>
   <a class="hero__label hero__label--br" href="#lookbook">Scroll ↓</a>
@@ -85,9 +85,9 @@
 <!-- DRESS-UP GAME -->
 <section class="game" id="dressup">
   <div class="look__head">
-    <span class="eyebrow">Get a sneak peek</span>
+    <span class="eyebrow">While you wait</span>
     <h2>Style her up</h2>
-    <p class="game__hint">This is what IRAAYA does — tap a piece to try it on, drag to adjust.</p>
+    <p class="game__hint">The first drop lands 2026 — until then, build a look, screenshot it, and tag&nbsp;@iraaya.</p>
   </div>
   <div class="game__wrap">
     <div class="game__stage" id="stage">
@@ -286,45 +286,73 @@
     const resetBtn = document.getElementById('gameReset');
     if (!stage || !tray) return;
     const cfg = {
-      tee:{top:27,left:50,width:44,z:2}, halter:{top:30,left:50,width:40,z:2},
+      tee:{top:27,left:50,width:42,z:2}, halter:{top:31,left:50,width:34,z:2},
       cargo:{top:66,left:50,width:44,z:1}, denimskirt:{top:47,left:50,width:46,z:1},
       plaidskirt:{top:48,left:50,width:50,z:1}, platforms:{top:95,left:50,width:40,z:1},
       bag:{top:52,left:76,width:22,z:3}, sunglasses:{top:10.5,left:50,width:22,z:4}
     };
     const placed = {};
+    let selected = null;
+
+    // resize (–/+) and remove (×) control
+    const ctrl = document.createElement('div'); ctrl.className = 'worn-ctrl'; ctrl.hidden = true;
+    ctrl.innerHTML = '<button type="button" data-a="minus" aria-label="Smaller">–</button>'
+                   + '<button type="button" data-a="plus" aria-label="Bigger">+</button>'
+                   + '<button type="button" data-a="del" aria-label="Remove">×</button>';
+    stage.appendChild(ctrl);
+    function positionCtrl(el){
+      const er = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+      ctrl.style.left = (er.left - sr.left + er.width/2) + 'px';
+      ctrl.style.top = (er.top - sr.top - 6) + 'px';
+    }
+    function select(el){ if (selected) selected.classList.remove('sel'); selected = el; el.classList.add('sel'); ctrl.hidden = false; positionCtrl(el); }
+    function deselect(){ if (selected) selected.classList.remove('sel'); selected = null; ctrl.hidden = true; }
+    ctrl.addEventListener('click', e => {
+      const a = e.target.dataset.a; if (!a || !selected) return;
+      const name = selected.dataset.name;
+      if (a === 'del'){ drop(name); tray.querySelector('.tray__item[data-item="'+name+'"]').classList.remove('on'); return; }
+      let w = parseFloat(selected.style.width);
+      w = Math.max(8, Math.min(130, a === 'plus' ? w*1.12 : w*0.89));
+      selected.style.width = w + '%'; positionCtrl(selected);
+    });
+
     function place(name){
       const c = cfg[name]; if (!c) return;
       const src = tray.querySelector('.tray__item[data-item="' + name + '"] img').src;
       const el = document.createElement('img');
-      el.src = src; el.className = 'worn'; el.draggable = false;
+      el.src = src; el.className = 'worn'; el.draggable = false; el.dataset.name = name;
       el.style.left = c.left+'%'; el.style.top = c.top+'%'; el.style.width = c.width+'%'; el.style.zIndex = c.z;
       stage.appendChild(el); placed[name] = el; drag(el, name);
     }
-    function drop(name){ if (placed[name]){ placed[name].remove(); delete placed[name]; } }
+    function drop(name){ if (placed[name]){ if (selected === placed[name]) deselect(); placed[name].remove(); delete placed[name]; } }
     tray.querySelectorAll('.tray__item').forEach(btn => {
       btn.addEventListener('click', () => {
-        const n = btn.dataset.item;
-        if (placed[n]){ drop(n); btn.classList.remove('on'); }
-        else { place(n); btn.classList.add('on'); }
+        const nm = btn.dataset.item;
+        if (placed[nm]){ drop(nm); btn.classList.remove('on'); }
+        else { place(nm); btn.classList.add('on'); select(placed[nm]); }
       });
     });
     resetBtn && resetBtn.addEventListener('click', () => {
-      Object.keys(placed).forEach(drop);
+      Object.keys(placed).slice().forEach(drop);
       tray.querySelectorAll('.tray__item.on').forEach(b => b.classList.remove('on'));
     });
+    stage.addEventListener('pointerdown', e => { if (e.target === stage) deselect(); });
+
     function drag(el, name){
-      let on=false, sx=0, sy=0, ox=0, oy=0;
+      let on=false, sx=0, sy=0, ox=0, oy=0, moved=false;
       el.addEventListener('pointerdown', e => {
-        on=true; el.setPointerCapture(e.pointerId); el.classList.add('grab'); el.style.zIndex=30;
+        on=true; moved=false; el.setPointerCapture(e.pointerId); el.classList.add('grab'); el.style.zIndex=30;
         const r=stage.getBoundingClientRect(); sx=e.clientX; sy=e.clientY;
         ox=parseFloat(el.style.left)/100*r.width; oy=parseFloat(el.style.top)/100*r.height;
       });
       el.addEventListener('pointermove', e => {
         if(!on) return; const r=stage.getBoundingClientRect();
+        if (Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy) > 4) moved=true;
         el.style.left=((ox+e.clientX-sx)/r.width*100)+'%';
         el.style.top=((oy+e.clientY-sy)/r.height*100)+'%';
+        if (selected===el) positionCtrl(el);
       });
-      function end(){ on=false; el.classList.remove('grab'); el.style.zIndex=cfg[name].z; }
+      function end(){ on=false; el.classList.remove('grab'); el.style.zIndex=cfg[name].z; if(!moved) select(el); else if(selected===el) positionCtrl(el); }
       el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
     }
   })();

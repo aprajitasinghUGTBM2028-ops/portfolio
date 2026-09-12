@@ -48,7 +48,7 @@ a{ color:inherit; text-decoration:none; }
 .hero{
   position:relative; overflow:hidden; text-align:center; min-height:auto;
   display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-  padding:2px 22px clamp(64px,10vh,96px);
+  padding:0 22px clamp(64px,10vh,96px);
 }
 .hero__label{
   position:absolute; z-index:4; font-family:var(--f-mono); font-size:.7rem; line-height:1.5;
@@ -60,10 +60,10 @@ a{ color:inherit; text-decoration:none; }
 .hero__label--br{ bottom:26px; right:clamp(16px,4vw,40px); color:var(--orange-2); }
 .hero__label--br:hover{ color:var(--ink); }
 
-.hang{ display:inline-block; transform:translateX(-2%); }
+.hang{ display:inline-block; }
 .drop{ margin-top:0; animation:drop 1.4s .1s cubic-bezier(.3,.72,.2,1) both; will-change:transform; }
 .pendulum{
-  transform-origin:78% 2%; display:inline-block; width:fit-content;
+  transform-origin:76% 1%; display:inline-block; width:fit-content;
   cursor:grab; -webkit-tap-highlight-color:transparent;
   animation:swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite;
   will-change:transform;
@@ -73,13 +73,13 @@ a{ color:inherit; text-decoration:none; }
 
 .hero__display{
   font-family:var(--f-disp); font-weight:800;
-  font-size:clamp(2.9rem,9.6vw,6.6rem); line-height:.9; letter-spacing:-.035em;
-  margin:calc(var(--logoW) * .03) 0 0; color:var(--ink); text-wrap:balance;
+  font-size:clamp(2.3rem,8vw,5.4rem); line-height:.92; letter-spacing:-.035em;
+  margin:calc(var(--logoW) * .02) 0 0; color:var(--ink); text-wrap:balance;
 }
 .hero__display em{ font-style:normal; font-weight:800; color:var(--orange-2); }
 
 /* ---------- Quote: scroll-scrubbed read-in, then clears away ------------- */
-.quote{ position:relative; height:150vh; }
+.quote{ position:relative; height:125vh; }
 .quote__sticky{
   position:sticky; top:0; height:100vh; display:flex; align-items:flex-start; justify-content:center;
   padding:clamp(120px,22vh,240px) 26px 0;
@@ -92,9 +92,9 @@ a{ color:inherit; text-decoration:none; }
 .quote__text .w{ display:inline-block; opacity:.14; }
 
 /* ---------- Lookbook: floats on the aurora, sticky scroll stack --------- */
-.look__head{ text-align:center; padding:clamp(46px,7vw,80px) 22px 0; }
+.look__head{ text-align:center; padding:clamp(16px,3vw,40px) 22px 0; }
 .look__head h2{ font-family:var(--f-disp); font-weight:700; font-size:clamp(2rem,5.2vw,3.2rem); letter-spacing:-.02em; margin:.28em 0 0; }
-.stack{ position:relative; padding:5vh 22px 24vh; }
+.stack{ position:relative; padding:2vh 22px 12vh; }
 .scard{ position:sticky; top:0; height:86vh; display:flex; align-items:center; justify-content:center; }
 
 /* the poster IS the polaroid — no extra frame */
@@ -154,7 +154,7 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 }
 
 /* ---------- Dress-up game ----------------------------------------------- */
-.game{ padding:clamp(50px,8vw,100px) 22px; }
+.game{ padding:clamp(24px,4vw,56px) 22px clamp(50px,8vw,90px); }
 .game__hint{ color:var(--ink-2); font-size:.96rem; margin:.5em 0 0; }
 .game__wrap{
   display:flex; gap:clamp(24px,5vw,64px); align-items:flex-start; justify-content:center;
@@ -168,6 +168,16 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 }
 .worn{ position:absolute; transform:translate(-50%,-50%); cursor:grab; touch-action:none; user-select:none; -webkit-user-drag:none; filter:drop-shadow(0 6px 10px rgba(23,20,15,.22)); }
 .worn.grab{ cursor:grabbing; }
+.worn.sel{ outline:2px dashed var(--orange); outline-offset:3px; border-radius:4px; }
+.worn-ctrl{
+  position:absolute; z-index:40; transform:translate(-50%,-100%);
+  display:flex; gap:4px; background:var(--ink); border-radius:999px; padding:4px; box-shadow:0 6px 14px -6px rgba(23,20,15,.5);
+}
+.worn-ctrl button{
+  width:28px; height:28px; border:0; border-radius:50%; background:var(--paper); color:var(--ink);
+  font-size:1.05rem; line-height:1; cursor:pointer; display:grid; place-items:center; font-family:var(--f);
+}
+.worn-ctrl button:hover{ background:var(--orange); }
 .game__side{ display:flex; flex-direction:column; gap:12px; width:min(340px,92vw); }
 .game__tray-head{ display:flex; align-items:center; justify-content:space-between; padding-bottom:2px; }
 .game__tray-label{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.14em; font-size:.7rem; color:var(--ink-2); }
@@ -213,13 +223,13 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   68%{ transform:translateY(-24px) } 82%{ transform:translateY(0) }
   91%{ transform:translateY(-8px) } 100%{ transform:translateY(0) }
 }
-/* a real pendulum: swings from the thread at the top, settles nearly straight */
+/* hangs from the thread at the top; settles straight and sways gently */
 @keyframes swing{
-  0%{ transform:rotate(15deg) } 15%{ transform:rotate(-12deg) } 32%{ transform:rotate(8deg) }
-  50%{ transform:rotate(-5deg) } 68%{ transform:rotate(3deg) } 85%{ transform:rotate(-1.5deg) }
-  100%{ transform:rotate(-2deg) }
+  0%{ transform:rotate(13deg) } 15%{ transform:rotate(-10deg) } 32%{ transform:rotate(6deg) }
+  50%{ transform:rotate(-4deg) } 68%{ transform:rotate(2deg) } 85%{ transform:rotate(-1deg) }
+  100%{ transform:rotate(0deg) }
 }
-@keyframes sway{ 0%,100%{ transform:rotate(-4deg) } 50%{ transform:rotate(1deg) } }
+@keyframes sway{ 0%,100%{ transform:rotate(-2.4deg) } 50%{ transform:rotate(2.4deg) } }
 @keyframes pxflash{ 0%{ opacity:0 } 22%{ opacity:.9 } 100%{ opacity:0 } }
 
 @media (max-width:560px){ .hdr__nav .nav-link{ display:none; } }
@@ -229,14 +239,14 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
   .hero{ padding-bottom:58px; }
   .hero__label--tl, .hero__label--tr{ display:none; }        /* corner labels clutter small screens */
   .hero__label--bl, .hero__label--br{ bottom:18px; font-size:.64rem; }
-  .hero__display{ font-size:clamp(2.6rem,13vw,3.6rem); margin-top:10px; }
+  .hero__display{ font-size:clamp(2.2rem,11vw,3.1rem); margin-top:8px; }
   .hero__status{ margin-top:14px; }
-  .quote{ height:128vh; }
+  .quote{ height:112vh; }
   .quote__text{ font-size:clamp(1.75rem,8vw,2.4rem); }
   .look__head h2{ font-size:clamp(1.9rem,8vw,2.4rem); }
-  .stack{ padding:4vh 18px 16vh; }
-  .scard{ height:82vh; }
-  .game{ padding:44px 16px 0; }
+  .stack{ padding:1vh 18px 8vh; }
+  .scard{ height:80vh; }
+  .game{ padding:30px 16px 0; }
   .game__wrap{ gap:22px; margin-top:26px; }
   .doll{ height:clamp(340px,52vh,460px); }
   .game__side{ width:100%; }
@@ -249,7 +259,7 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 
 @media (prefers-reduced-motion:reduce){
   .drop{ animation:none; transform:none; }
-  .pendulum{ animation:none; transform:rotate(-2deg); }
+  .pendulum{ animation:none; transform:rotate(0deg); }
   .quote__text .w{ opacity:1 !important; }
   .spark{ animation:none; }
 }
