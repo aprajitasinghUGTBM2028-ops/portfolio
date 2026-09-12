@@ -283,7 +283,7 @@
   const joinNote = document.getElementById('joinNote');
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // Formspree endpoint — every Name + Email lands in your Formspree dashboard.
-  const JOIN_ENDPOINT = 'https://formspree.io/f/xkjnakyg';
+  const JOIN_ENDPOINT = 'https://formspree.io/f/mgaebqwr';
   let lastFocus = null;
   function openModal(){ lastFocus = document.activeElement; modal.hidden = false; document.body.style.overflow = 'hidden'; setTimeout(() => joinName.focus(), 60); }
   function closeModal(){ modal.hidden = true; document.body.style.overflow = ''; joinNote.textContent = ''; joinNote.className = 'modal__note'; if (lastFocus) lastFocus.focus(); }
