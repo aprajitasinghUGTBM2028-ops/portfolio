@@ -45,9 +45,7 @@
 
 <!-- QUOTE — scroll to read it in, then it clears away into the cards -->
 <section class="quote" id="quote">
-  <div class="quote__sticky">
-    <p class="quote__text" id="quoteText">IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
-  </div>
+  <p class="quote__text" id="quoteText">IRAAYA is a new fashion house — dressed around you: your shape, your skin, and the moment you’re dressing for.</p>
 </section>
 
 <!-- LOOKBOOK — scroll-driven sticky card stack, CTA on every card -->
@@ -155,26 +153,15 @@
     pend.style.animation = 'swing 4s 1.3s cubic-bezier(.36,0,.2,1) both, sway 7.5s 5s ease-in-out infinite';
   });
 
-  // ---- quote: scroll-scrubbed read-in, then clears away ----
-  const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+  // ---- quote: felt word-by-word reveal on enter (compact — no pinning, no empty) ----
   const quoteSec = document.getElementById('quote');
   const quoteEl = document.getElementById('quoteText');
-  let qWords = [];
-  if (quoteEl){
-    qWords = quoteEl.textContent.trim().split(/\s+/).map(word => {
-      const s = document.createElement('span'); s.className = 'w'; s.textContent = word + ' '; return s;
-    });
-    quoteEl.textContent = ''; qWords.forEach(s => quoteEl.appendChild(s));
-  }
-  function quoteTick(){
-    if (!quoteSec || !quoteEl) return;
-    const total = quoteSec.offsetHeight - innerHeight;
-    const p = clamp(-quoteSec.getBoundingClientRect().top / (total || 1), 0, 1);
-    const rp = clamp(p / 0.82, 0, 1) * qWords.length;         // read-in slowly over most of the scroll
-    qWords.forEach((w,i) => { w.style.opacity = (0.14 + 0.86*clamp((rp - i)*0.7, 0, 1)).toFixed(3); });
-    const ep = clamp((p - 0.9) / 0.1, 0, 1);                   // quick clear at the very end, into the cards
-    quoteEl.style.transform = `translateY(${(-ep*40).toFixed(1)}px)`;
-    quoteEl.style.opacity = (1 - ep).toFixed(3);
+  if (quoteEl && quoteSec){
+    const parts = quoteEl.textContent.trim().split(/\s+/);
+    quoteEl.innerHTML = parts.map((w,i) => `<span class="w" style="--i:${i}">${w} </span>`).join('');
+    quoteSec.classList.add('js');
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ quoteSec.classList.add('in'); io.disconnect(); } }), { threshold:0.35 });
+    io.observe(quoteSec);
   }
 
   // ---- scroll-driven sticky card stack (vanilla; iOS-safe) ----
@@ -206,10 +193,10 @@
   }
 
   let ticking = false;
-  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { quoteTick(); stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
+  function onScroll(){ if (!ticking){ requestAnimationFrame(() => { stackTick(); parallaxTick(); ticking = false; }); ticking = true; } }
   addEventListener('scroll', onScroll, { passive:true });
-  addEventListener('resize', () => { quoteTick(); stackTick(); parallaxTick(); drawAllPixels(); });
-  quoteTick(); stackTick(); parallaxTick();
+  addEventListener('resize', () => { stackTick(); parallaxTick(); drawAllPixels(); });
+  stackTick(); parallaxTick();
 
   // buttery smooth scroll (Lenis if it loaded; native scroll otherwise)
   if (window.Lenis && matchMedia('(prefers-reduced-motion: no-preference)').matches){
