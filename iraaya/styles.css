@@ -178,7 +178,15 @@ html{ scrollbar-color:rgba(23,20,15,.32) transparent; scrollbar-width:thin; }
 /* ---------- Dress-up game ----------------------------------------------- */
 .game{ padding:clamp(24px,4vw,56px) 22px clamp(50px,8vw,90px); }
 .game__hint{ color:var(--ink-2); font-size:.96rem; margin:.5em 0 0; }
+.gender{ display:inline-flex; gap:3px; padding:4px; border-radius:999px; background:rgba(23,20,15,.07); }
+.gender__opt{
+  border:0; background:none; cursor:pointer; padding:7px 20px; border-radius:999px;
+  font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.14em; font-size:.64rem; color:var(--ink-2);
+  transition:background .2s ease, color .2s ease;
+}
+.gender__opt.is-on{ background:var(--ink); color:var(--paper); }
 .silo{ display:flex; flex-direction:column; align-items:center; gap:15px; margin-top:clamp(22px,3.5vw,36px); }
+.silo__opt[hidden], .tray__item[hidden]{ display:none; }
 .silo__step{ font-family:var(--f-mono); text-transform:uppercase; letter-spacing:.2em; font-size:.66rem; color:var(--ink-2); opacity:.7; }
 .silo__opts{ display:flex; gap:clamp(22px,6vw,56px); align-items:flex-end; }
 .silo__opt{

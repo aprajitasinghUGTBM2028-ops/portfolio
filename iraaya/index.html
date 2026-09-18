@@ -84,15 +84,21 @@
 <section class="game" id="dressup">
   <div class="look__head">
     <span class="eyebrow">While you wait</span>
-    <h2>Style her up</h2>
+    <h2 id="gameTitle">Style her up</h2>
     <p class="game__hint">More shapes and styles are coming. Want one next? Tell us on <a href="https://instagram.com/iraaya.fashion_club" target="_blank" rel="noopener">Instagram</a> or <a href="mailto:iraaya.fashionclub@gmail.com">email</a> — IRAAYA is built around&nbsp;you.</p>
   </div>
   <div class="silo">
+    <div class="gender" id="gender">
+      <button class="gender__opt is-on" type="button" data-gender="women" aria-pressed="true">Women</button>
+      <button class="gender__opt" type="button" data-gender="men" aria-pressed="false">Men</button>
+    </div>
     <span class="silo__step">1 · Pick your silhouette</span>
     <div class="silo__opts" id="silo">
-      <button class="silo__opt is-on" type="button" data-body="slim" aria-pressed="true"><img src="assets/game/base.png" alt="" /><span>Slim</span></button>
-      <button class="silo__opt" type="button" data-body="pear" aria-pressed="false"><img src="assets/game/base-pear.png" alt="" /><span>Pear</span></button>
-      <button class="silo__opt" type="button" data-body="straight" aria-pressed="false"><img src="assets/game/base-square.png" alt="" /><span>Rectangle</span></button>
+      <button class="silo__opt is-on" type="button" data-gender="women" data-body="slim" aria-pressed="true"><img src="assets/game/base.png" alt="" /><span>Slim</span></button>
+      <button class="silo__opt" type="button" data-gender="women" data-body="pear" aria-pressed="false"><img src="assets/game/base-pear.png" alt="" /><span>Pear</span></button>
+      <button class="silo__opt" type="button" data-gender="women" data-body="straight" aria-pressed="false"><img src="assets/game/base-square.png" alt="" /><span>Rectangle</span></button>
+      <button class="silo__opt" type="button" data-gender="men" data-body="men-lean" aria-pressed="false" hidden><img src="assets/game/base-men-lean.png" alt="" /><span>Lean</span></button>
+      <button class="silo__opt" type="button" data-gender="men" data-body="men-broad" aria-pressed="false" hidden><img src="assets/game/base-men-broad.png" alt="" /><span>Broad</span></button>
     </div>
   </div>
   <div class="game__wrap">
@@ -105,14 +111,20 @@
         <button class="game__reset" id="gameReset">Reset</button>
       </div>
       <div class="game__tray" id="tray">
-        <button class="tray__item" data-item="tee"><img src="assets/game/tee.png" alt="Baby tee" /></button>
-        <button class="tray__item" data-item="halter"><img src="assets/game/halter.png" alt="Butterfly halter" /></button>
-        <button class="tray__item" data-item="cargo"><img src="assets/game/cargo.png" alt="Cargo pants" /></button>
-        <button class="tray__item" data-item="denimskirt"><img src="assets/game/denimskirt.png" alt="Denim mini skirt" /></button>
-        <button class="tray__item" data-item="plaidskirt"><img src="assets/game/plaidskirt.png" alt="Plaid mini skirt" /></button>
-        <button class="tray__item" data-item="platforms"><img src="assets/game/platforms.png" alt="Platform sneakers" /></button>
-        <button class="tray__item" data-item="bag"><img src="assets/game/bag.png" alt="Baguette bag" /></button>
-        <button class="tray__item" data-item="sunglasses"><img src="assets/game/sunglasses.png" alt="Tinted sunglasses" /></button>
+        <button class="tray__item" data-gender="women" data-item="tee"><img src="assets/game/tee.png" alt="Baby tee" /></button>
+        <button class="tray__item" data-gender="women" data-item="halter"><img src="assets/game/halter.png" alt="Butterfly halter" /></button>
+        <button class="tray__item" data-gender="women" data-item="cargo"><img src="assets/game/cargo.png" alt="Cargo pants" /></button>
+        <button class="tray__item" data-gender="women" data-item="denimskirt"><img src="assets/game/denimskirt.png" alt="Denim mini skirt" /></button>
+        <button class="tray__item" data-gender="women" data-item="plaidskirt"><img src="assets/game/plaidskirt.png" alt="Plaid mini skirt" /></button>
+        <button class="tray__item" data-gender="women" data-item="platforms"><img src="assets/game/platforms.png" alt="Platform sneakers" /></button>
+        <button class="tray__item" data-gender="women" data-item="bag"><img src="assets/game/bag.png" alt="Baguette bag" /></button>
+        <button class="tray__item" data-gender="women" data-item="sunglasses"><img src="assets/game/sunglasses.png" alt="Tinted sunglasses" /></button>
+        <button class="tray__item" data-gender="men" data-item="mtee" hidden><img src="assets/game/mtee.png" alt="Graphic tee" /></button>
+        <button class="tray__item" data-gender="men" data-item="mjacket" hidden><img src="assets/game/mjacket.png" alt="Track jacket" /></button>
+        <button class="tray__item" data-gender="men" data-item="mjeans" hidden><img src="assets/game/mjeans.png" alt="Baggy jeans" /></button>
+        <button class="tray__item" data-gender="men" data-item="mcargo" hidden><img src="assets/game/mcargo.png" alt="Cargo shorts" /></button>
+        <button class="tray__item" data-gender="men" data-item="msneakers" hidden><img src="assets/game/msneakers.png" alt="Skate sneakers" /></button>
+        <button class="tray__item" data-gender="men" data-item="mcap" hidden><img src="assets/game/mcap.png" alt="Y2K cap" /></button>
       </div>
     </div>
   </div>
@@ -330,7 +342,11 @@
       tee:{top:27,left:50,width:42,z:2}, halter:{top:31,left:50,width:34,z:2},
       cargo:{top:66,left:50,width:44,z:1}, denimskirt:{top:47,left:50,width:46,z:1},
       plaidskirt:{top:48,left:50,width:50,z:1}, platforms:{top:95,left:50,width:40,z:1},
-      bag:{top:52,left:76,width:22,z:3}, sunglasses:{top:10.5,left:50,width:22,z:4}
+      bag:{top:52,left:76,width:22,z:3}, sunglasses:{top:10.5,left:50,width:22,z:4},
+      // menswear
+      mtee:{top:30,left:50,width:54,z:2}, mjacket:{top:29,left:50,width:58,z:3},
+      mjeans:{top:69,left:50,width:44,z:1}, mcargo:{top:55,left:50,width:52,z:1},
+      msneakers:{top:95,left:50,width:42,z:1}, mcap:{top:8,left:50,width:25,z:4}
     };
     const placed = {};
     let selected = null;
@@ -388,14 +404,35 @@
     // silhouette picker — swap the body, then reset the look so clothes re-fit
     const doll = document.getElementById('doll');
     const silo = document.getElementById('silo');
+    function selectSilo(opt){
+      silo.querySelectorAll('.silo__opt').forEach(o => { o.classList.remove('is-on'); o.setAttribute('aria-pressed','false'); });
+      opt.classList.add('is-on'); opt.setAttribute('aria-pressed','true');
+      doll.src = opt.querySelector('img').src; // reuse the (inlined) thumbnail src
+    }
     silo && silo.querySelectorAll('.silo__opt').forEach(opt => {
       opt.addEventListener('click', () => {
         if (opt.classList.contains('is-on')) return;
-        silo.querySelectorAll('.silo__opt').forEach(o => { o.classList.remove('is-on'); o.setAttribute('aria-pressed','false'); });
-        opt.classList.add('is-on'); opt.setAttribute('aria-pressed','true');
-        doll.src = opt.querySelector('img').src; // reuse the (inlined) thumbnail src
-        clearLook();
+        selectSilo(opt); clearLook();
       });
+    });
+
+    // gender toggle — swap which silhouettes and rack items show, reset the look
+    const gender = document.getElementById('gender');
+    const gameTitle = document.getElementById('gameTitle');
+    function setGender(g){
+      gender.querySelectorAll('.gender__opt').forEach(o => {
+        const on = o.dataset.gender === g;
+        o.classList.toggle('is-on', on); o.setAttribute('aria-pressed', on);
+      });
+      let first = null;
+      silo.querySelectorAll('.silo__opt').forEach(o => { o.hidden = o.dataset.gender !== g; if (!o.hidden && !first) first = o; });
+      tray.querySelectorAll('.tray__item').forEach(t => { t.hidden = t.dataset.gender !== g; });
+      clearLook();
+      if (first) selectSilo(first);
+      if (gameTitle) gameTitle.textContent = g === 'men' ? 'Style him up' : 'Style her up';
+    }
+    gender && gender.querySelectorAll('.gender__opt').forEach(o => {
+      o.addEventListener('click', () => { if (!o.classList.contains('is-on')) setGender(o.dataset.gender); });
     });
 
     function drag(el, name){
