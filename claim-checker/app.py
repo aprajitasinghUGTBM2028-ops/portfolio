@@ -112,9 +112,11 @@ with col2:
 
 caption_input = None
 if url and ("instagram.com" in url.lower()):
+    st.info("Instagram blocks auto-fetch most of the time. Paste the caption or what the creator says below — just the tool name + their claims is enough.")
     caption_input = st.text_area(
-        "Optional: paste what the creator says in the reel (helps if auto-fetch misses it)",
-        height=100,
+        "What does the reel say? (creator's caption, voiceover, or on-screen text)",
+        height=120,
+        placeholder='e.g. "This AI tool just replaced my entire design team. It\'s called ToolName and it generates videos from text in seconds..."',
     )
 
 # ── Run ──────────────────────────────────────────────────────────────
@@ -133,7 +135,8 @@ if check_btn and url:
 
         if content.get("needs_manual_input"):
             if not caption_input:
-                st.error("Could not fetch Instagram content automatically. Paste the caption or what the creator says above and try again.")
+                status.update(label="Need caption", state="error")
+                st.warning("Instagram blocked the auto-fetch (this is normal). Paste what the creator says in the box above and hit **Check it** again.")
                 st.stop()
             content = {
                 "ok": True,
