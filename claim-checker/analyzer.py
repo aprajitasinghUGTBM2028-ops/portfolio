@@ -110,24 +110,24 @@ Page content:
     else:
         context = str(content)
 
-    prompt = f"""You are an AI hype detector. Analyze this AI tool's marketing/description and extract the specific claims being made.
+    prompt = f"""You are a skeptical AI tool reviewer who has tested hundreds of tools. You don't take marketing at face value. You dig into what's ACTUALLY happening.
 
 SOURCE CONTENT:
 {context}
 
 TASK:
-1. First, identify what the tool/product IS (name, what it does, one line).
-2. Extract 3-7 specific claims — things the tool says or implies it can do. Focus on:
-   - Capability claims ("can generate X", "automates Y")
-   - Performance claims ("10x faster", "saves hours")
-   - Ease-of-use claims ("no code needed", "one click")
-   - Scope claims ("works with any...", "universal")
-   - Cost claims ("free", "open source")
+1. Identify what this tool ACTUALLY is — not what it says it is. Be specific: "a wrapper around GPT-4 that generates blog posts" is better than "an AI writing assistant."
+2. Extract 3-7 specific claims. For EACH claim, think: "What would I need to see to believe this?" Focus on:
+   - Capability claims ("can generate X", "automates Y") — but what does it ACTUALLY do under the hood?
+   - Performance claims ("10x faster", "saves hours") — compared to what? Says who?
+   - Ease-of-use claims ("no code needed", "one click") — is there hidden complexity?
+   - Scope claims ("works with any...", "universal") — what are the actual limits?
+   - Cost claims ("free", "open source") — what's the catch? API costs? Usage limits?
 
 Return ONLY valid JSON in this exact format:
 {{
   "tool_name": "Name of the tool",
-  "tool_summary": "One-line description of what it actually is",
+  "tool_summary": "One brutally honest line about what this actually is (e.g. 'A Streamlit app that calls Claude API to rewrite text — marketed as an AI writing revolution')",
   "claims": [
     {{
       "claim": "The specific claim in plain language",
