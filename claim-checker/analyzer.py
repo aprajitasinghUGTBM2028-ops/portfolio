@@ -25,7 +25,8 @@ def _clean_text(text: str) -> str:
 def get_client():
     """Initialize and return the OpenAI client."""
     raw_key = os.environ.get("OPENAI_API_KEY", "")
-    api_key = "".join(c for c in raw_key if ord(c) < 128).strip()
+    raw_key = "".join(raw_key.split())
+    api_key = "".join(c for c in raw_key if ord(c) < 128)
     if not api_key:
         raise RuntimeError(
             "OPENAI_API_KEY not set.\n"
