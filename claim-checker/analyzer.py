@@ -49,6 +49,9 @@ def generate(client, prompt: str, use_search: bool = False) -> str:
                 if "503" in err or "UNAVAILABLE" in err:
                     time.sleep(2 ** attempt)
                     continue
+                if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                    time.sleep(5 * (attempt + 1))
+                    continue
                 if "404" in err or "NOT_FOUND" in err or "not found" in err.lower():
                     break
                 if "400" in err or "INVALID" in err or "API key" in err.lower():
