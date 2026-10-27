@@ -164,8 +164,10 @@ SOURCE CONTENT (for reference):
 {source_text}
 {pricing_info}
 
+IMPORTANT: Your training data has a cutoff date. AI moves fast — new models, tools, and versions launch constantly. If a claim references a model name, version, or tool you don't recognize, do NOT assume it's fake. Mark it "partially_true" with evidence noting you cannot verify it due to your knowledge cutoff, rather than "exaggerated." Only mark something "exaggerated" when you have positive evidence it's misleading, not just because you haven't heard of it.
+
 TASK — For each claim, assess:
-1. **Verdict**: "confirmed" (evidence supports it), "partially_true" (some truth but overstated), or "exaggerated" (misleading or unsubstantiated)
+1. **Verdict**: "confirmed" (evidence supports it), "partially_true" (some truth but overstated, or cannot fully verify), or "exaggerated" (you have positive evidence it's misleading)
 2. **Evidence**: Brief explanation of why you gave that verdict
 3. **Red flags**: Any issues (requires paid API, complex setup, limited scope, etc.)
 
