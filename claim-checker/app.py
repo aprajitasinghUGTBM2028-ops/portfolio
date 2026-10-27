@@ -162,7 +162,10 @@ if check_btn and url:
             st.write(f"Fetched page: **{content.get('title', url)}**")
         elif content["source_type"] == "instagram":
             if content.get("auto_fetched"):
+                method = content.get("fetch_method", "")
                 st.write(f"Fetched Instagram content: **{content.get('title', url)}**")
+                if content.get("caption_only"):
+                    st.caption("Got the caption text. For full reel analysis (on-screen text, voiceover), paste what the creator says/shows in the box above.")
             else:
                 st.write("Using provided Instagram caption")
 
@@ -170,9 +173,11 @@ if check_btn and url:
         if content["source_type"] == "instagram":
             st.write("Identifying tool from reel...")
             st.write("Fetching official page...")
+            st.write("Searching Reddit, HN, Product Hunt for independent verification...")
             st.write("Running full analysis...")
         else:
             st.write("Extracting claims...")
+            st.write("Searching Reddit, HN, Product Hunt for independent verification...")
             st.write("Verifying & scoring...")
         try:
             result = analyze(content)

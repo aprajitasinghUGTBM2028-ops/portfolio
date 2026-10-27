@@ -174,15 +174,54 @@ def fetch_webpage(url: str) -> dict:
         return {"ok": False, "error": f"Failed to fetch page: {e}"}
 
 
+def _try_instagram_oembed(url: str) -> dict | None:
+    """Try Instagram's oEmbed API — works for public posts without auth."""
+    try:
+        oembed_url = f"https://api.instagram.com/oembed/?url={url}&omitscript=true"
+        resp = requests.get(oembed_url, headers=HEADERS, timeout=10)
+        if resp.ok:
+            data = resp.json()
+            title = data.get("title", "")
+            author = data.get("author_name", "")
+            html = data.get("html", "")
+            caption = title
+            if html:
+                soup = BeautifulSoup(html, "html.parser")
+                text_from_html = soup.get_text(separator="\n", strip=True)
+                if text_from_html and len(text_from_html) > len(caption):
+                    caption = text_from_html
+            if caption and len(caption) > 20:
+                return {
+                    "ok": True,
+                    "source_type": "instagram",
+                    "url": url,
+                    "caption": caption,
+                    "title": f"{author} on Instagram" if author else "",
+                    "text": caption,
+                    "auto_fetched": True,
+                    "fetch_method": "oembed",
+                    "caption_only": True,
+                }
+    except (requests.exceptions.RequestException, ValueError):
+        pass
+    return None
+
+
 def fetch_instagram(url: str) -> dict:
-    """Fetch Instagram post/reel content from meta tags and page text."""
+    """Fetch Instagram post/reel content. Tries oEmbed first, then meta tags."""
+    # Method 1: oEmbed API (most reliable for public posts)
+    oembed_result = _try_instagram_oembed(url)
+    if oembed_result:
+        return oembed_result
+
+    # Method 2: Direct page scraping for meta tags
     try:
         resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
         if not resp.ok:
             return {
                 "ok": True, "source_type": "instagram", "url": url,
                 "needs_manual_input": True,
-                "message": f"Could not fetch Instagram page (status {resp.status_code}). Paste the caption below.",
+                "message": "Instagram blocked the auto-fetch (this is normal for private/recent posts). Paste the caption or what the creator says above.",
             }
 
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -228,6 +267,8 @@ def fetch_instagram(url: str) -> dict:
             "title": title,
             "text": f"{caption}\n\n{page_text}" if caption else page_text,
             "auto_fetched": True,
+            "fetch_method": "meta_tags",
+            "caption_only": True,
         }
 
     except requests.exceptions.RequestException:

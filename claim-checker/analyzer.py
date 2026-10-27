@@ -43,7 +43,7 @@ def get_client():
 
 
 def generate(client, prompt: str, prefer_model: str = None, **kwargs) -> str:
-    """Try multiple models with retries."""
+    """Try multiple models with retries (Chat Completions — no web search)."""
     prompt = _clean_text(prompt)
     models = MODELS
     if prefer_model:
@@ -82,6 +82,46 @@ def generate(client, prompt: str, prefer_model: str = None, **kwargs) -> str:
                 break
     raise RuntimeError(
         f"All models failed. Last error: {last_error}\n"
+        "Try again in a few minutes, or check your API key."
+    )
+
+
+def generate_with_search(client, prompt: str, prefer_model: str = None) -> str:
+    """Use the Responses API with web_search so GPT can search the internet live."""
+    prompt = _clean_text(prompt)
+    models = MODELS
+    if prefer_model:
+        models = [prefer_model] + [m for m in MODELS if m != prefer_model]
+    last_error = None
+    for model in models:
+        for attempt in range(3):
+            try:
+                response = client.responses.create(
+                    model=model,
+                    input=prompt,
+                    tools=[{"type": "web_search", "search_context_size": "medium"}],
+                    temperature=0.3,
+                )
+                return response.output_text.strip()
+            except Exception as e:
+                last_error = e
+                err = str(e)
+                if "429" in err or "rate_limit" in err.lower():
+                    time.sleep(5 * (attempt + 1))
+                    continue
+                if "503" in err or "overloaded" in err.lower():
+                    time.sleep(2 ** attempt)
+                    continue
+                if "404" in err or "model_not_found" in err.lower():
+                    break
+                if "invalid_api_key" in err.lower() or "authentication" in err.lower():
+                    raise RuntimeError(
+                        f"OpenAI API error: {err}\n"
+                        "Check that your API key is valid at https://platform.openai.com/api-keys"
+                    )
+                break
+    raise RuntimeError(
+        f"All models failed (Responses API). Last error: {last_error}\n"
         "Try again in a few minutes, or check your API key."
     )
 
@@ -244,12 +284,14 @@ CONTENT VERDICT:
 === GUARDRAILS ===
 
 1. SOURCE CONTENT is what the tool CLAIMS, not proof. Read it for data points and features, but treat every claim as "the website says X" — then ask "but is X actually true?"
-2. ONLY mark "confirmed" when you have INDEPENDENT evidence: your training data knowledge of the tool, Reddit/HN/Twitter discussion, GitHub stars/activity, app store reviews, YouTube reviews, or the technical architecture making the claim necessarily true.
-3. If you only have the website's word for it → "unverified" with evidence: "Only source is the tool's own website. No independent discussion found on Reddit, Twitter, Product Hunt, or YouTube."
-4. NEVER INVENT features or steps not mentioned in the source. "Not mentioned on the page" beats a guess.
-5. If the source says "free" or "It's free" → free_tier is "yes", free_tier_detail quotes it. Only say "unclear" if pricing is truly never mentioned.
-6. The tool type from extraction was: {tool_type} — verify this. A gallery is NOT a generator.
-7. Check for name lookalikes (e.g. "Motion" the design tool vs "PromptMotion" the gallery). If confusable, set lookalike_warning. Otherwise set it to null.
+2. YOU HAVE WEB SEARCH. Use it. For each claim, ACTUALLY SEARCH for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube, and any relevant forums. Search for "[tool name] review", "[tool name] reddit", "[tool name] product hunt", etc.
+3. ONLY mark "confirmed" when your web search found INDEPENDENT evidence: Reddit/HN/Twitter posts, Product Hunt listings, YouTube reviews, GitHub stars, app store reviews, blog posts from real users, or the technical architecture making the claim necessarily true.
+4. If your web search found nothing → "unverified" with evidence: "Searched Reddit, Hacker News, Product Hunt, YouTube — zero independent mentions found. Only source is the tool's own website."
+5. CITE what you find. "Found 3 Reddit posts in r/artificial discussing this tool (oldest from Jan 2024)" or "Product Hunt launch with 245 upvotes" — real data, real numbers.
+6. NEVER INVENT features or steps not mentioned in the source. "Not mentioned on the page" beats a guess.
+7. If the source says "free" or "It's free" → free_tier is "yes", free_tier_detail quotes it. Only say "unclear" if pricing is truly never mentioned.
+8. The tool type from extraction was: {tool_type} — verify this. A gallery is NOT a generator.
+9. Check for name lookalikes (e.g. "Motion" the design tool vs "PromptMotion" the gallery). If confusable, set lookalike_warning. Otherwise set it to null.
 
 === INPUTS ===
 
@@ -312,7 +354,7 @@ Return ONLY valid JSON matching this structure:
   "summary": "2-3 honest sentences. What's real, what's unverified, and the bottom line."
 }}"""
 
-    text = generate(client, prompt, prefer_model="gpt-4o")
+    text = generate_with_search(client, prompt, prefer_model="gpt-4o")
 
     try:
         return _parse_json_response(text)
@@ -424,21 +466,22 @@ Page content:
 
 1. Say what the thing IS in the first sentence: an app, a gallery, a prompt pack, a repo, a plugin, an add-on. Never call a gallery a "generator."
 2. NEVER invent steps. Don't describe a sign-up, trial, or payment unless the official page shows it. Otherwise write "not seen on the page."
-3. Mark every claim:
-   - CONFIRMED: You saw evidence on the official page or a credible third-party source
-   - REPORTED: A third party mentioned it but you can't independently verify
-   - CANNOT CONFIRM: Self-reported by the creator/tool, or no evidence found
-4. Treat the reel creator's own numbers (engagement, results they claim) as CANNOT CONFIRM.
-5. Scoring rubric (be STRICT — most tools score 3-6):
+3. YOU HAVE WEB SEARCH. Use it. Search for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube. Search "[tool name] review", "[tool name] reddit", etc. Cite what you find with real numbers.
+4. Mark every claim:
+   - CONFIRMED: Your web search found evidence on a credible third-party source (Reddit post, YouTube review, Product Hunt listing, etc.)
+   - REPORTED: A third party mentioned it but you can't independently verify the specific number/detail
+   - CANNOT CONFIRM: Self-reported by the creator/tool, or your web search found nothing
+5. Treat the reel creator's own numbers (engagement, results they claim) as CANNOT CONFIRM.
+6. Scoring rubric (be STRICT — most tools score 3-6):
    - 8-10: News or traction in the last 30 days, still rising, hook can't be copied in an hour. RARE.
    - 5-7: Real interest but average, similar content already exists.
    - 1-4: Old news, crowded format, or little evidence of demand.
    Every score MUST cite a number or fact. No evidence = write "no evidence found" and don't inflate.
-6. Keep it short. Cut anything the reader can't act on.
-7. Don't repeat the reel's claims as findings — CHECK them against the official page.
-8. For setup steps, mark which times come from the source and which are YOUR estimates.
-9. List paid requirements (accounts, subscriptions, API keys) as their own step with cost.
-10. If lookalike sites or similarly-named tools exist, warn about them.
+7. Keep it short. Cut anything the reader can't act on.
+8. Don't repeat the reel's claims as findings — CHECK them using your web search against real sources.
+9. For setup steps, mark which times come from the source and which are YOUR estimates.
+10. List paid requirements (accounts, subscriptions, API keys) as their own step with cost.
+11. If lookalike sites or similarly-named tools exist, warn about them.
 
 === INPUTS ===
 
@@ -511,7 +554,7 @@ Return ONLY valid JSON:
   ]
 }}"""
 
-    text = generate(client, prompt, prefer_model="gpt-4o")
+    text = generate_with_search(client, prompt, prefer_model="gpt-4o")
 
     try:
         result = _parse_json_response(text)
