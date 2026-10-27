@@ -1,6 +1,12 @@
 """
 analyzer.py — Uses OpenAI GPT to extract claims, verify them,
 score tryability, and produce a content verdict.
+
+Architecture: 4-step pipeline where each call does one focused thing.
+  1. extract_claims — read homepage + sub-pages, extract what the tool claims
+  2. gather_evidence — web search ONLY, build structured fact list
+  3. analyze_with_evidence — score/verify/verdict from pre-gathered evidence
+  4. write_hooks — write hooks constrained to evidence list
 """
 
 import os
@@ -99,7 +105,7 @@ def generate_with_search(client, prompt: str, prefer_model: str = None) -> str:
                 response = client.responses.create(
                     model=model,
                     input=prompt,
-                    tools=[{"type": "web_search", "search_context_size": "medium"}],
+                    tools=[{"type": "web_search", "search_context_size": "high"}],
                     temperature=0.3,
                 )
                 return response.output_text.strip()
@@ -126,10 +132,25 @@ def generate_with_search(client, prompt: str, prefer_model: str = None) -> str:
     )
 
 
-def extract_claims(client, content: dict) -> list[dict]:
-    """Extract hype claims from fetched content."""
+def _parse_json_response(text: str) -> dict:
+    """Clean markdown fences and parse JSON from LLM response."""
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
+    if text.startswith("json"):
+        text = text[4:].strip()
+    return json.loads(text)
 
-    # Build context string based on source type
+
+# ═══════════════════════════════════════════════════════════════════
+# STEP 1: Extract claims from homepage + sub-pages
+# ═══════════════════════════════════════════════════════════════════
+
+def extract_claims(client, content: dict) -> dict:
+    """Extract hype claims from fetched content including sub-pages."""
+
     if content["source_type"] == "github":
         context = f"""GitHub Repo: {content['owner']}/{content['repo']}
 Description: {content.get('meta', {}).get('description', 'N/A')}
@@ -145,7 +166,15 @@ URL: {content.get('url', '')}
 Meta description: {content.get('meta_description', '')}
 
 Page content:
-{content.get('text', '')}"""
+{content.get('text', '')[:8000]}"""
+
+        # Include sub-page content so extraction sees /customize, /blog, etc.
+        subpage_text = content.get("subpage_text", "")
+        if subpage_text:
+            context += f"""
+
+SUB-PAGES (internal links followed one level deep):
+{subpage_text[:6000]}"""
 
     elif content["source_type"] == "instagram":
         context = f"""Instagram caption:
@@ -153,61 +182,56 @@ Page content:
     else:
         context = str(content)
 
-    prompt = f"""You are a meticulous AI tool investigator. Your job is to READ THE SOURCE CONTENT CAREFULLY and extract ONLY what's actually there. You NEVER make assumptions or fill in gaps with guesses.
+    prompt = f"""You are a meticulous AI tool investigator. READ THE SOURCE CONTENT CAREFULLY — every page, including sub-pages — and extract ONLY what's actually there.
 
 SOURCE CONTENT:
 {context}
 
-TASK — Read the source content above word by word before answering:
+TASK:
 
-1. IDENTIFY THE TOOL TYPE from the source content. What does this tool ACTUALLY do? Choose the most accurate category:
+1. IDENTIFY THE TOOL TYPE from the source content:
    - Generator (creates new content from scratch)
    - Gallery/Directory (curates or showcases existing content)
    - Wrapper (puts a UI around another AI like GPT/Claude/Stable Diffusion)
    - Marketplace (sells templates, prompts, or assets)
-   - Editor (modifies existing content)
-   - Analyzer (examines or scores content)
-   - Aggregator (collects data from multiple sources)
-   - Other (explain what it is)
-   BASE THIS ON WHAT THE SOURCE CONTENT DESCRIBES, not what the name sounds like.
+   - Editor / Analyzer / Aggregator / Other
+   BASE THIS ON WHAT THE PAGES DESCRIBE, not what the name sounds like.
 
-2. FIND SPECIFIC NUMBERS AND DATA in the source content. Look for:
-   - User counts, entries, items in the database
-   - Statistics, research findings, studies mentioned
-   - Pricing numbers, free tier details
+2. FIND EVERY SPECIFIC NUMBER across all pages (homepage AND sub-pages):
+   - Entry counts, user counts, item tallies
+   - Statistics from blog/analysis pages (e.g. "33 accounts used the same prompt")
+   - Pricing: look for "free", price tiers, or "subscribe" on ANY page
    - Performance metrics, time savings
-   - Any interesting data points that would make someone stop scrolling
-   Quote these EXACTLY as they appear.
+   Quote these EXACTLY as they appear and note which page they're on.
 
 3. Extract 3-7 specific claims. For EACH claim:
-   - Include the EXACT quote from the source where this claim appears
-   - If there is no quote (you're inferring it), mark it as "implied"
-   - Focus on what the source ACTUALLY SAYS, not what you think tools like this usually do
+   - Include the EXACT quote from the source
+   - Note which page it's from (homepage, /blog, /customize, etc.)
+   - If there is no quote (you're inferring), mark it as "implied"
+
+4. IDENTIFY PAID DEPENDENCIES: Does using this tool require a paid account for another service? (e.g. Claude Pro, OpenAI API, Adobe subscription). List each with its cost.
 
 Return ONLY valid JSON:
 {{
   "tool_name": "Name of the tool",
   "tool_type": "generator|gallery|wrapper|marketplace|editor|analyzer|aggregator|other",
-  "tool_summary": "One honest line based ONLY on what the source content shows (e.g. 'A curated gallery of 233 AI-generated motion design videos with prompt details — not a generator')",
-  "key_data_points": ["specific numbers/stats found in the source content"],
+  "tool_summary": "One honest line from what the pages show",
+  "key_data_points": ["specific numbers/stats with page source"],
+  "paid_dependencies": ["Claude Pro at $20/mo", "OpenAI API at ~$X per use"],
   "claims": [
     {{
       "claim": "The specific claim in plain language",
       "category": "capability|performance|ease_of_use|scope|cost",
-      "quote": "The EXACT text from the source, or 'implied — no direct quote found'"
+      "quote": "EXACT text from the source",
+      "page": "homepage|/blog|/customize|etc."
     }}
   ]
 }}
 
 If this doesn't appear to be an AI tool, return:
-{{
-  "tool_name": "N/A",
-  "tool_summary": "This doesn't appear to be an AI tool",
-  "claims": [],
-  "not_ai_tool": true
-}}"""
+{{"tool_name": "N/A", "tool_summary": "This doesn't appear to be an AI tool", "claims": [], "not_ai_tool": true}}"""
 
-    text = generate(client, prompt)
+    text = generate(client, prompt, prefer_model="gpt-4o")
 
     try:
         return _parse_json_response(text)
@@ -215,130 +239,175 @@ If this doesn't appear to be an AI tool, return:
         return {"tool_name": "Parse Error", "tool_summary": "Could not parse LLM response", "claims": [], "raw": text}
 
 
-def verify_claims(client, claims_data: dict, content: dict) -> dict:
-    """Verify claims with live web search, structured evidence, and hook validation."""
+# ═══════════════════════════════════════════════════════════════════
+# STEP 2: Gather evidence via web search (ONLY fact-finding)
+# ═══════════════════════════════════════════════════════════════════
+
+def gather_evidence(client, tool_name: str, claims_data: dict, content: dict) -> list:
+    """Use web search to find independent evidence. Returns a list of facts."""
+
+    claims_summary = "\n".join(
+        f"- {c['claim']}" for c in claims_data.get("claims", [])
+    )
+
+    prompt = f"""You are a research assistant. Your ONLY job is to search the web and report what you find about "{tool_name}". Do NOT analyze, score, or give opinions. Just find facts.
+
+SEARCH THESE (run each search):
+1. "{tool_name}" site:reddit.com
+2. "{tool_name}" review
+3. "{tool_name}" site:producthunt.com
+4. "{tool_name}" — general search for the tool
+5. "{tool_name}" similar names OR lookalike — find domains with similar names
+
+CLAIMS TO CHECK (search for evidence about each):
+{claims_summary}
+
+FOR EACH FACT YOU FIND, report:
+- fact: what you found (exact quote or summary)
+- source_url: the URL (strip ?utm_... tracking params)
+- source_type: "official_site" | "reddit" | "product_hunt" | "news_article" | "youtube" | "blog" | "directory" | "other"
+- date: when published, or null
+- search_query: what you searched to find this
+
+ALSO REPORT:
+- Searches that returned NOTHING (so we know you actually searched)
+- Domains with similar names to "{tool_name}" (lookalikes)
+- Whether the tool requires paid accounts for other services (e.g. Claude, OpenAI, Adobe)
+
+Return ONLY valid JSON:
+{{
+  "evidence": [
+    {{
+      "fact": "what you found",
+      "source_url": "url without utm params",
+      "source_type": "reddit|product_hunt|news_article|official_site|etc.",
+      "date": "2024-01-15 or null",
+      "search_query": "what you searched"
+    }}
+  ],
+  "empty_searches": [
+    {{"query": "what you searched", "result": "no results found"}}
+  ],
+  "lookalike_domains": ["promptmotion.org", "otherdomain.com"],
+  "paid_dependencies_found": ["Claude Pro $20/mo — needed to generate videos"]
+}}"""
+
+    text = generate_with_search(client, prompt, prefer_model="gpt-4o")
+
+    try:
+        return _parse_json_response(text)
+    except (json.JSONDecodeError, ValueError):
+        return {"evidence": [], "empty_searches": [], "lookalike_domains": [], "paid_dependencies_found": []}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# STEP 3: Verify claims + score + verdict (NO web search needed)
+# ═══════════════════════════════════════════════════════════════════
+
+def analyze_with_evidence(client, claims_data: dict, content: dict, evidence_data: dict) -> dict:
+    """Verify claims, score, and write verdict using pre-gathered evidence."""
 
     claims_json = json.dumps(claims_data, indent=2)
+    evidence_json = json.dumps(evidence_data.get("evidence", []), indent=2)
+    empty_searches = json.dumps(evidence_data.get("empty_searches", []), indent=2)
+    lookalikes = evidence_data.get("lookalike_domains", [])
+    paid_deps = evidence_data.get("paid_dependencies_found", [])
 
-    # Build source text with sub-pages
-    pricing_info = ""
-    if content.get("source_type") == "web" and content.get("has_pricing_signals"):
-        pricing_info = "\nNote: The page contains pricing-related language."
-    if content.get("source_type") == "github":
-        meta = content.get("meta", {})
-        pricing_info = f"\nGitHub stats — Stars: {meta.get('stars', '?')}, Language: {meta.get('language', '?')}, Last push: {meta.get('last_push', '?')}"
-
+    # Build page summary
     source_text = ""
     subpage_text = ""
     if content.get("source_type") == "github":
-        source_text = content.get("readme", "")[:6000]
+        source_text = content.get("readme", "")[:4000]
     elif content.get("source_type") == "web":
-        source_text = content.get("text", "")[:6000]
-        subpage_text = content.get("subpage_text", "")[:6000]
-    elif content.get("source_type") == "instagram":
-        source_text = content.get("caption", content.get("text", ""))[:3000]
+        source_text = content.get("text", "")[:4000]
+        subpage_text = content.get("subpage_text", "")[:4000]
 
     tool_type = claims_data.get("tool_type", "unknown")
-    key_data = json.dumps(claims_data.get("key_data_points", []))
+    paid_deps_from_extract = claims_data.get("paid_dependencies", [])
+    all_paid_deps = list(set(paid_deps + paid_deps_from_extract))
 
-    subpage_section = ""
-    if subpage_text:
-        fetched_labels = [sp["label"] for sp in content.get("subpages_fetched", [])]
-        subpage_section = f"""
-SUB-PAGES FETCHED ({', '.join(fetched_labels)}):
-{subpage_text}
-"""
+    prompt = f"""You are writing a tool report for content creators. You have pre-gathered evidence below — use ONLY these facts. Do not invent or assume anything not in the evidence or the page content.
 
-    prompt = f"""You are a skeptical AI tool investigator with web search. A content creator pasted a URL. Your job: check if it's legit or hype.
+=== CLAIM STATUSES (use exactly) ===
+- CONFIRMED: Feature visible on the official page, OR evidence from a third party backs it up.
+- REPORTED: A third party mentioned it, but you can't verify the specific number.
+- SELF-REPORTED: The tool's own page says it — label it honestly as their claim.
+- NOT FOUND: Web search returned nothing. "Not found" does NOT mean "false."
+- CONTRADICTED: Evidence directly contradicts the claim.
 
-=== EVIDENCE RULES ===
+=== RULES ===
+1. A feature on the official page (a /customize page, a subscribe box) is CONFIRMED as existing.
+2. Claims about popularity, quality, or results need third-party evidence to be CONFIRMED.
+3. Every number you write needs a source. If the homepage says one number and the blog says another, show BOTH.
+4. Only reference searches that appear in EMPTY SEARCHES below. Never claim you searched something you didn't.
+5. Third-party write-ups show interest, NOT virality. Virality means people share it unprompted with their audience.
+6. Coverage ≠ virality. A directory listing ≠ endorsement.
+7. Paid dependencies: {json.dumps(all_paid_deps) if all_paid_deps else "None found"}
+8. Lookalike domains found: {json.dumps(lookalikes) if lookalikes else "None found"}
 
-1. The HOMEPAGE and SUB-PAGES below are what the tool CLAIMS. A feature visible on the official page (a Customize page, a Subscribe box, a pricing table) is CONFIRMED as existing. But claims about quality, results, or popularity need THIRD-PARTY evidence.
-2. YOU HAVE WEB SEARCH. Use it. Search for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube. Search "[tool name] review", "[tool name] reddit", "[tool name] site:reddit.com", etc.
-3. Use these EXACT statuses for each claim:
-   - CONFIRMED: Feature exists on the official page, OR third-party source backs it up.
-   - REPORTED: A third party mentioned it but you can't verify the specific detail.
-   - SELF-REPORTED: The tool/creator's own number or claim. Label it as such.
-   - NOT FOUND: You searched and found nothing. "NOT FOUND" ≠ "false" — say what you searched.
-   - CONTRADICTED: Evidence contradicts the claim. Cite the contradiction.
-4. NEVER write "I checked Reddit" or "I searched Product Hunt" unless you actually ran that search and its result is in your evidence. If you didn't search, don't claim you did.
-5. Every number needs a source and a date. If the homepage says 233 but the blog says 199, show both.
-6. Read the sub-pages below for features the homepage doesn't mention (customize pages, blog analysis, pricing details, sponsor info).
-7. Dig for a distinct statistic — the site's blog or analysis pages often have one (e.g. "33 people used the same prompt, likes ranged 0 to 17,023").
-8. Split "browse and copy" from "make a video" in setup. Give each its own time and cost. If making content requires a paid account (e.g. Claude Pro), list it as a separate step with cost.
-9. Strip tracking parameters (?utm_...) from every source URL you output.
-10. Search for lookalike sites with similar names and list them. Say they are not the official site.
+=== SCORING (be strict — most tools score 3-6) ===
+Tryability: "browse and copy" is SEPARATE from "make content."
+- Browse score: Can someone browse and copy a prompt for free? If yes, high score.
+- Create score: Can someone make original content? Include the cost of paid dependencies.
+- If making content needs Claude Pro ($20/mo) or OpenAI API, the create score drops.
 
-=== SCORING RULES (most tools score 3-6, not 7-10) ===
-
-VIRALITY (1-10): Every score MUST cite evidence. No evidence = no inflation.
-- 1-2: Boring CLI tool, no visual output
-- 3-4: Nothing new — another wrapper, another chatbot
-- 5-6: Unique angle OR interesting output. Most good tools land here.
-- 7-8: Genuinely novel with proven viral potential. RARE.
-- 9-10: Cultural moment. Almost never.
-
-HYPE (1-10):
-- 1-3: Honest, understated. Open source README.
-- 4-6: Normal marketing. Most tools.
-- 7-8: Heavy unverified claims. "Revolutionary", big numbers with no proof.
-- 9-10: Outright deceptive.
-
-VERDICT:
-- "COVER IT" = unique angle + data + audience cares. RARE.
-- "COVER THE GAP" = interesting but creator needs their own angle. MOST COMMON.
-- "SKIP" = nothing new, no data, audience won't care.
+Virality (1-10): Every score MUST cite a specific fact from the evidence.
+- Trend fit: Is this trending NOW or old news? Cite dates.
+- Uniqueness: How many similar tools exist? If evidence found 100 similar projects, score low.
+- Shareability / Visual wow: Based on what the tool actually produces.
 
 === INPUTS ===
 
-Tool type from extraction: {tool_type}
+Tool type: {tool_type}
 
-EXTRACTED CLAIMS:
+CLAIMS:
 {claims_json}
 
-KEY DATA POINTS:
-{key_data}
+WEB SEARCH EVIDENCE:
+{evidence_json}
 
-HOMEPAGE CONTENT:
-{source_text}
-{pricing_info}
-{subpage_section}
+SEARCHES THAT FOUND NOTHING:
+{empty_searches}
 
-=== OUTPUT FORMAT ===
+HOMEPAGE (first 4000 chars):
+{source_text[:4000]}
 
-Return ONLY valid JSON. The "evidence_list" is your structured fact sheet — every fact you cite anywhere must appear here first, with a source URL. Hooks may ONLY use facts from this list.
+SUB-PAGES:
+{subpage_text[:4000]}
+
+=== OUTPUT (valid JSON only) ===
 
 {{
   "tool_name": "{claims_data.get('tool_name', 'Unknown')}",
   "evidence_list": [
     {{
-      "fact": "what you found",
+      "fact": "from the evidence above",
       "status": "CONFIRMED|REPORTED|SELF-REPORTED|NOT FOUND|CONTRADICTED",
-      "source_url": "the URL where you found this (stripped of UTM params), or 'official site' for features on the page, or null if not found",
-      "date": "when this was published/found, or null"
+      "source_url": "url or 'official site'",
+      "date": "date or null"
     }}
   ],
   "verified_claims": [
     {{
-      "claim": "the claim text",
+      "claim": "claim text",
       "verdict": "CONFIRMED|REPORTED|SELF-REPORTED|NOT FOUND|CONTRADICTED",
-      "evidence": "cite from evidence_list — what you found and where",
-      "red_flags": ["specific flag or empty array"]
+      "evidence": "cite the specific evidence item",
+      "red_flags": []
     }}
   ],
   "tryability": {{
     "free_tier": "yes|no|freemium|unclear",
-    "free_tier_detail": "quote what the source says",
-    "setup_browse": {{"time": "X min", "cost": "$0", "steps": "what browsing/copying involves"}},
-    "setup_create": {{"time": "X min", "cost": "$Y/mo for [service]", "steps": "what actually making content involves, including paid dependencies"}},
+    "free_tier_detail": "quote from the page",
+    "setup_browse": {{"time": "X min", "cost": "$0", "steps": "what browsing involves"}},
+    "setup_create": {{"time": "X min", "cost": "$Y/mo for [service]", "steps": "what creating involves, including paid deps"}},
     "visible_result": "yes|no|unclear",
-    "blockers": ["only real blockers"],
+    "blockers": ["real blockers only"],
     "score": 4
   }},
   "setup_guide": [
     "Step 1: Browse — ...",
-    "Step 2: Copy a prompt — ...",
-    "Step 3: To make a video — ... (requires [paid service] at $X/mo)"
+    "Step 2: Copy a prompt — ... (free)",
+    "Step 3: To make a video — requires [paid service] at $X/mo"
   ],
   "virality": {{
     "visual_wow": 5,
@@ -346,100 +415,85 @@ Return ONLY valid JSON. The "evidence_list" is your structured fact sheet — ev
     "trend_fit": 5,
     "uniqueness": 4,
     "virality_score": 4,
-    "virality_explanation": "cite evidence for each score"
+    "virality_explanation": "cite specific evidence for each sub-score"
   }},
   "comparison": {{
     "similar_to": "Think of it as [known tool] but for [niche]",
-    "what_makes_it_different": "based on source content",
+    "what_makes_it_different": "cite specific data point that competitors lack",
     "who_is_this_for": "specific person + specific need",
-    "lookalike_warning": "list any similarly-named sites found and clarify they are not official, or null",
-    "lookalike_sites": ["site1.com", "site2.com"]
+    "lookalike_warning": "list of similarly-named sites and clarify they are not official, or null",
+    "lookalike_sites": {json.dumps(lookalikes) if lookalikes else "[]"}
   }},
   "content_verdict": {{
     "verdict": "COVER IT|COVER THE GAP|SKIP",
-    "reason": "2-3 sentences citing evidence_list entries",
-    "hooks": [
-      "Hook 1 — must use ONLY facts from evidence_list. Include specific numbers.",
-      "Hook 2 — different angle, still evidence-backed",
-      "Hook 3 — third angle"
-    ],
-    "reel_format": "suggested format"
+    "reason": "2-3 sentences citing evidence"
   }},
   "hype_score": 5,
-  "summary": "2-3 honest sentences. What's confirmed, what's self-reported, what's not found."
+  "summary": "2-3 honest sentences. What's confirmed, self-reported, and not found."
 }}"""
 
-    text = generate_with_search(client, prompt, prefer_model="gpt-4o")
+    text = generate(client, prompt, prefer_model="gpt-4o")
 
     try:
-        result = _parse_json_response(text)
+        return _parse_json_response(text)
     except (json.JSONDecodeError, ValueError):
-        return {"error": "Could not parse verification response", "raw": text}
-
-    # Hook validation pass: check hooks only use facts from evidence_list
-    result = _validate_hooks(client, result)
-
-    return result
+        return {"error": "Could not parse analysis response", "raw": text}
 
 
-def _validate_hooks(client, result: dict) -> dict:
-    """Second pass: check that hooks only use facts from the evidence list."""
-    hooks = result.get("content_verdict", {}).get("hooks", [])
-    evidence = result.get("evidence_list", [])
-    if not hooks or not evidence:
-        return result
+# ═══════════════════════════════════════════════════════════════════
+# STEP 4: Write hooks from evidence (separate focused call)
+# ═══════════════════════════════════════════════════════════════════
 
-    evidence_json = json.dumps(evidence, indent=2)
-    hooks_json = json.dumps(hooks, indent=2)
+def write_hooks(client, evidence_list: list, tool_name: str) -> list:
+    """Write 3 reel hooks using ONLY facts from the evidence list."""
 
-    prompt = f"""You are a fact-checker. Below is a list of verified evidence and a list of reel hooks.
-Check each hook: does every number, claim, and action in the hook appear in the evidence list?
+    evidence_json = json.dumps(evidence_list, indent=2)
 
-EVIDENCE LIST:
+    prompt = f"""You write reel hooks for content creators. A hook is the first sentence that makes someone stop scrolling. It creates TENSION — a gap between what the viewer expects and what's true.
+
+=== RULES ===
+1. Every number, claim, and action in the hook MUST appear in the evidence list below.
+2. If a number isn't in the evidence, you CANNOT use it.
+3. A hook is NOT a headline or description. It's a question or contradiction that demands an answer.
+
+=== BAD HOOKS (these are headlines, not hooks) ===
+- "Over 200 motion videos with full prompts" — no tension, just a feature list
+- "Explore this amazing AI tool" — generic, no data
+- "Check out this gallery of AI animations" — descriptive, not hooky
+
+=== GOOD HOOKS (these create tension) ===
+- "33 accounts typed the same 26 words. Same prompt. Likes from 0 to 17,023." — specific data, unexpected gap
+- "The gallery's own blog says long prompts win. An independent review says they don't look better. The one phrase that scored higher? 'Go all out.'" — contradiction between sources
+- "44% of this AI motion gallery is one prompt, remixed. I ran it so you don't have to." — surprising stat + promise
+
+=== EVIDENCE LIST ===
 {evidence_json}
 
-HOOKS:
-{hooks_json}
-
-For each hook, return:
-- "valid": true if every fact in the hook is backed by the evidence list
-- "valid": false if the hook contains a number, claim, or action NOT in the evidence
-- "fix": if invalid, rewrite the hook using ONLY facts from the evidence list
+Write exactly 3 hooks for "{tool_name}". Each hook must:
+- Use a specific number or fact from the evidence list
+- Create tension (a gap, a contradiction, or a surprising comparison)
+- Be 1-2 sentences max
 
 Return ONLY valid JSON:
 {{
-  "hook_checks": [
-    {{"hook_index": 0, "valid": true}},
-    {{"hook_index": 1, "valid": false, "problem": "claims Reddit search but no Reddit evidence exists", "fix": "rewritten hook using only evidence"}}
+  "hooks": [
+    "hook 1 text",
+    "hook 2 text",
+    "hook 3 text"
   ]
 }}"""
 
     try:
-        text = generate(client, prompt)
-        checks = _parse_json_response(text)
-        validated_hooks = list(hooks)
-        for check in checks.get("hook_checks", []):
-            idx = check.get("hook_index", -1)
-            if not check.get("valid") and check.get("fix") and 0 <= idx < len(validated_hooks):
-                validated_hooks[idx] = check["fix"]
-        if "content_verdict" in result:
-            result["content_verdict"]["hooks"] = validated_hooks
+        text = generate(client, prompt, prefer_model="gpt-4o")
+        result = _parse_json_response(text)
+        return result.get("hooks", [])
     except Exception:
-        pass
-    return result
+        return []
 
 
-def _parse_json_response(text: str) -> dict:
-    """Clean markdown fences and parse JSON from LLM response."""
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    text = text.strip()
-    if text.startswith("json"):
-        text = text[4:].strip()
-    return json.loads(text)
-
+# ═══════════════════════════════════════════════════════════════════
+# STEP 5 (reel pipeline): Identify tool from Instagram reel
+# ═══════════════════════════════════════════════════════════════════
 
 def _identify_tool_from_reel(client, reel_text: str) -> dict:
     """Identify the tool/product promoted in an Instagram reel."""
@@ -465,7 +519,7 @@ Return ONLY valid JSON:
 
 
 def _analyze_reel(client, content: dict) -> dict:
-    """Full reel analysis pipeline: identify tool → fetch official page → analyze."""
+    """Full reel analysis pipeline: identify tool -> fetch page -> gather evidence -> analyze."""
     from fetcher import fetch_webpage, fetch_github, classify_url
 
     reel_text = content.get("caption", content.get("text", ""))
@@ -486,7 +540,6 @@ def _analyze_reel(client, content: dict) -> dict:
         if not tool_page.get("ok"):
             tool_page = None
 
-    # Also try to extract URLs directly from the reel text
     if not tool_page:
         url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]*'
         found_urls = re.findall(url_pattern, reel_text)
@@ -502,7 +555,7 @@ def _analyze_reel(client, content: dict) -> dict:
                     break
                 tool_page = None
 
-    # Step 3: Build the tool page context
+    # Step 3: Build context and run evidence-based analysis
     tool_page_section = ""
     if tool_page and tool_page.get("ok"):
         if tool_page.get("source_type") == "github":
@@ -516,6 +569,7 @@ Description: {meta.get('description', 'N/A')}
 README:
 {tool_page.get('readme', '')[:6000]}"""
         else:
+            subpage_text = tool_page.get("subpage_text", "")
             tool_page_section = f"""
 TOOL'S OFFICIAL PAGE ({tool_url}):
 Title: {tool_page.get('title', 'N/A')}
@@ -523,32 +577,35 @@ Meta: {tool_page.get('meta_description', '')}
 
 Page content:
 {tool_page.get('text', '')[:6000]}"""
-    else:
-        tool_page_section = "\nTOOL'S OFFICIAL PAGE: Could not be fetched. Base your analysis only on the reel content and your training knowledge. Be explicit about what you could not verify."
+            if subpage_text:
+                fetched_labels = [sp.get("label", "?") for sp in tool_page.get("subpages_fetched", [])]
+                tool_page_section += f"""
 
-    # Step 4: Run reel-specific analysis
-    prompt = f"""You are an AI tool analyst writing a concise report for content creators about a tool promoted in an Instagram reel. Follow these rules EXACTLY.
+SUB-PAGES ({', '.join(fetched_labels)}):
+{subpage_text[:4000]}"""
+    else:
+        tool_page_section = "\nTOOL'S OFFICIAL PAGE: Could not be fetched. Be explicit about what you could not verify."
+
+    prompt = f"""You are an AI tool analyst writing a concise report for content creators about a tool promoted in an Instagram reel.
 
 === RULES ===
-
-1. Say what the thing IS in the first sentence: an app, a gallery, a prompt pack, a repo, a plugin, an add-on. Never call a gallery a "generator."
-2. NEVER invent steps. Don't describe a sign-up, trial, or payment unless the official page shows it. Otherwise write "not seen on the page."
-3. YOU HAVE WEB SEARCH. Use it. Search for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube. Search "[tool name] review", "[tool name] reddit", etc. Cite what you find with real numbers.
-4. Mark every claim:
-   - CONFIRMED: Your web search found evidence on a credible third-party source (Reddit post, YouTube review, Product Hunt listing, etc.)
-   - REPORTED: A third party mentioned it but you can't independently verify the specific number/detail
-   - CANNOT CONFIRM: Self-reported by the creator/tool, or your web search found nothing
-5. Treat the reel creator's own numbers (engagement, results they claim) as CANNOT CONFIRM.
-6. Scoring rubric (be STRICT — most tools score 3-6):
-   - 8-10: News or traction in the last 30 days, still rising, hook can't be copied in an hour. RARE.
-   - 5-7: Real interest but average, similar content already exists.
-   - 1-4: Old news, crowded format, or little evidence of demand.
-   Every score MUST cite a number or fact. No evidence = write "no evidence found" and don't inflate.
-7. Keep it short. Cut anything the reader can't act on.
-8. Don't repeat the reel's claims as findings — CHECK them using your web search against real sources.
-9. For setup steps, mark which times come from the source and which are YOUR estimates.
-10. List paid requirements (accounts, subscriptions, API keys) as their own step with cost.
-11. If lookalike sites or similarly-named tools exist, warn about them.
+1. Say what the thing IS in the first sentence: app, gallery, prompt pack, repo, plugin. Never call a gallery a "generator."
+2. NEVER invent steps not on the official page. Write "not seen on the page" if unsure.
+3. YOU HAVE WEB SEARCH. Search for the tool on Reddit, Product Hunt, YouTube, Hacker News. Cite what you find.
+4. Use these statuses:
+   - CONFIRMED: Feature on the official page OR third-party evidence
+   - REPORTED: Third party mentioned, can't verify specific detail
+   - SELF-REPORTED: Creator's or tool's own claim
+   - NOT FOUND: Searched, found nothing (not the same as "false")
+   - CONTRADICTED: Evidence contradicts the claim
+5. Scoring (strict, most tools 3-6):
+   - 8-10: Breaking news, still rising, can't be copied. RARE.
+   - 5-7: Real interest but average.
+   - 1-4: Old news, crowded, little evidence.
+   Every score MUST cite a number or fact.
+6. Split "browse/copy" from "make content." List paid dependencies as their own step.
+7. List any domains with similar names (lookalikes).
+8. Third-party write-ups mean interest, not virality. Coverage ≠ spread.
 
 === INPUTS ===
 
@@ -560,65 +617,55 @@ Caption/text:
 
 {tool_page_section}
 
-=== OUTPUT ===
+=== OUTPUT (valid JSON only) ===
 
-Return ONLY valid JSON:
 {{
   "is_reel_report": true,
-  "what_it_is": "One sentence: what this tool actually is (app, gallery, repo, plugin, etc.). Be precise.",
+  "what_it_is": "One sentence: what this tool actually is.",
   "tool_name": "{tool_info.get('tool_name', 'Unknown')}",
   "tool_url": "{tool_url or 'unknown'}",
   "reel_viewed": {{
-    "creator": "the creator handle from the reel",
-    "caption_summary": "2-3 key points from the caption",
-    "engagement": "likes, comments, shares if visible in the fetched data, or 'not available from meta tags'",
-    "on_screen": "what could be determined from the available content",
-    "not_seen": "be honest: video frames, audio, full comments section, etc."
+    "creator": "handle",
+    "caption_summary": "2-3 key points",
+    "engagement": "visible numbers or 'not available'",
+    "on_screen": "what was visible",
+    "not_seen": "what couldn't be determined"
   }},
+  "evidence_list": [
+    {{"fact": "what you found", "status": "CONFIRMED|REPORTED|SELF-REPORTED|NOT FOUND|CONTRADICTED", "source_url": "url", "date": "date or null"}}
+  ],
   "setup_steps": [
-    {{
-      "step_num": 0,
-      "what_to_do": "prerequisite step if needed",
-      "time_estimate": "5 min",
-      "time_source": "my estimate",
-      "cost": "$0 or $X/mo or null"
-    }}
+    {{"step_num": 1, "what_to_do": "step", "time_estimate": "X min", "time_source": "page|my estimate", "cost": "$0 or $X/mo"}}
   ],
   "total_time": {{
-    "from_nothing": "X min — if starting with nothing",
-    "if_ready": "Y min — if prerequisites are met"
+    "from_nothing": "X min",
+    "if_ready": "Y min"
   }},
-  "risks": "What the install edits, downloads, or asks for. Say if you didn't audit the code. null if no risks seen.",
+  "risks": "what install does, or null",
   "tryability": {{
-    "free_tier": "Free / Freemium ($X/mo for more) / Paid ($X) — based on official page, NOT the reel",
+    "free_tier": "Free / Freemium / Paid",
     "developer_score": "X/10",
     "non_coder_score": "X/10",
-    "time_to_first_result": "estimate with reasoning"
+    "time_to_first_result": "estimate"
   }},
   "claim_check": {{
-    "confirmed": [
-      {{"claim": "what was confirmed", "source": "where you saw evidence"}}
-    ],
-    "cannot_confirm": [
-      {{"claim": "what can't be confirmed", "reason": "why — self-reported / no evidence / etc."}}
-    ]
+    "confirmed": [{{"claim": "text", "source": "where"}}],
+    "cannot_confirm": [{{"claim": "text", "reason": "why"}}]
   }},
   "scorecard": [
-    {{"metric": "Trend fit", "score": "X/10", "why": "specific reason citing evidence"}},
-    {{"metric": "Uniqueness", "score": "X/10", "why": "specific reason"}},
-    {{"metric": "Shareability", "score": "X/10", "why": "specific reason with numbers if available"}},
-    {{"metric": "Tryability", "score": "X/10", "why": "specific reason"}},
-    {{"metric": "Overall", "score": "X/10", "why": "weighted summary"}}
+    {{"metric": "Trend fit", "score": "X/10", "why": "cite evidence"}},
+    {{"metric": "Uniqueness", "score": "X/10", "why": "cite evidence"}},
+    {{"metric": "Shareability", "score": "X/10", "why": "cite evidence"}},
+    {{"metric": "Tryability", "score": "X/10", "why": "cite evidence"}},
+    {{"metric": "Overall", "score": "X/10", "why": "weighted"}}
   ],
-  "distinct_angle": "What is NOT in the reel that IS verifiable — the content creator's edge. Be specific.",
+  "distinct_angle": "What's verifiable that the reel missed — the creator's edge.",
   "reel_hooks": [
-    {{"name": "short name for the hook concept", "description": "Full hook description with on-screen text suggestion. Be creative and specific."}},
-    {{"name": "second hook", "description": "A different creative angle"}},
-    {{"name": "third hook", "description": "A third distinct angle"}}
+    {{"name": "hook concept", "description": "Full hook with tension and data"}},
+    {{"name": "second hook", "description": "Different angle"}},
+    {{"name": "third hook", "description": "Third angle"}}
   ],
-  "sources": [
-    {{"title": "Source name", "url": "the URL"}}
-  ]
+  "sources": [{{"title": "name", "url": "url"}}]
 }}"""
 
     text = generate_with_search(client, prompt, prefer_model="gpt-4o")
@@ -634,22 +681,26 @@ Return ONLY valid JSON:
         return {"error": "Could not parse reel analysis", "raw": text}
 
 
+# ═══════════════════════════════════════════════════════════════════
+# Main pipeline
+# ═══════════════════════════════════════════════════════════════════
+
 def analyze(content: dict) -> dict:
-    """Full analysis pipeline: extract claims → verify → verdict."""
+    """Full analysis pipeline: extract -> gather evidence -> analyze -> write hooks."""
     client = get_client()
 
-    # Instagram reels get the reel-specific pipeline
+    # Instagram reels get their own pipeline
     if content.get("source_type") == "instagram":
         return _analyze_reel(client, content)
 
-    # Everything else: standard pipeline
+    # ── Step 1: Extract claims (sees homepage + sub-pages) ──
     claims_data = extract_claims(client, content)
 
     if claims_data.get("not_ai_tool"):
         return {
             "tool_name": "N/A",
             "error": "not_ai_tool",
-            "message": "This doesn't appear to be an AI tool. The Claim Checker works best with AI tools, APIs, and platforms.",
+            "message": "This doesn't appear to be an AI tool.",
             "claims_data": claims_data,
         }
 
@@ -661,7 +712,19 @@ def analyze(content: dict) -> dict:
             "claims_data": claims_data,
         }
 
-    result = verify_claims(client, claims_data, content)
+    tool_name = claims_data.get("tool_name", "Unknown")
+
+    # ── Step 2: Gather evidence via web search (ONLY fact-finding) ──
+    evidence_data = gather_evidence(client, tool_name, claims_data, content)
+
+    # ── Step 3: Analyze with evidence (no search, just reasoning) ──
+    result = analyze_with_evidence(client, claims_data, content, evidence_data)
     result["claims_data"] = claims_data
+
+    # ── Step 4: Write hooks from evidence (focused creative call) ──
+    evidence_list = result.get("evidence_list", evidence_data.get("evidence", []))
+    hooks = write_hooks(client, evidence_list, tool_name)
+    if hooks and "content_verdict" in result:
+        result["content_verdict"]["hooks"] = hooks
 
     return result

@@ -217,9 +217,10 @@ if check_btn and url:
             st.write("Searching Reddit, HN, Product Hunt for independent verification...")
             st.write("Running full analysis...")
         else:
-            st.write("Extracting claims...")
-            st.write("Searching Reddit, HN, Product Hunt for independent verification...")
-            st.write("Verifying & scoring...")
+            st.write("Step 1/4: Extracting claims from page + sub-pages...")
+            st.write("Step 2/4: Web searching Reddit, HN, Product Hunt for evidence...")
+            st.write("Step 3/4: Verifying claims against evidence...")
+            st.write("Step 4/4: Writing hooks from evidence...")
         try:
             result = analyze(content)
         except RuntimeError as e:
