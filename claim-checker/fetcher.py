@@ -116,9 +116,12 @@ def _pick_subpages(soup, base_url: str):
 
 
 def _budget(pages):
+    if not pages:
+        return []
+    per = max(500, TOTAL_CHARS // max(len(pages), 1))
     out, used = [], 0
     for p in pages:
-        t = p["text"][:PER_PAGE_CHARS if out else PER_PAGE_CHARS * 2]
+        t = p["text"][:per]
         if used + len(t) > TOTAL_CHARS:
             t = t[: max(0, TOTAL_CHARS - used)]
         if t:

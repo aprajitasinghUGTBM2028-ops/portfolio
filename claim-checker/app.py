@@ -94,11 +94,34 @@ if st.button("Check it", type="primary") and url:
 
     st.markdown(f"**{C.esc(r['name'])}** — {C.esc(r['what_it_is'])}")
 
+    sc = r["scores"]
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Browse", f"{r['scores']['browse']}/5")
-    c2.metric("Create", f"{r['scores']['create']}/5")
-    c3.metric("Independent sources", r["scores"]["n_independent"])
-    c4.metric("Crowdedness", r["scores"]["crowded"])
+    c1.metric("Browse", f"{sc['browse']}/5")
+    c2.metric("Create", f"{sc['create']}/5")
+    c3.metric("Independent sources", sc["n_independent"])
+    c4.metric("Crowdedness", sc["crowded"])
+
+    with st.expander("Score breakdown", expanded=False):
+        if sc.get("browse_reasons"):
+            st.caption(f"Browse: {'; '.join(sc['browse_reasons'])}")
+        else:
+            st.caption("Browse: no issues detected")
+        if sc.get("create_reasons"):
+            st.caption(f"Create: {'; '.join(sc['create_reasons'])}")
+        else:
+            st.caption("Create: no issues detected")
+        st.caption(f"Crowdedness: {sc.get('crowded_reason', '')}")
+        if sc.get("setup_minutes") is not None:
+            st.caption(f"Estimated setup: ~{sc['setup_minutes']} min")
+        else:
+            st.caption("Setup time: not stated on the page")
+        pd = sc.get("paid_dependency")
+        if pd is True:
+            st.caption("Paid dependency: YES — needs a paid service to use")
+        elif pd is False:
+            st.caption("Paid dependency: No — free tier available")
+        else:
+            st.caption("Paid dependency: UNKNOWN — page does not clearly state")
 
     rpt = r["report"]
     st.markdown(f"**Summary:** {C.esc(rpt['summary'])}")
@@ -118,6 +141,14 @@ if st.button("Check it", type="primary") and url:
     if rpt.get("distinct_angle"):
         st.markdown(f"**Distinct angle:** {C.esc(rpt['distinct_angle']['text'])}")
 
+    if rpt.get("virality_notes"):
+        st.markdown(f"**Virality:** {C.esc(rpt['virality_notes'])}")
+    if rpt.get("uniqueness"):
+        st.markdown(f"**Uniqueness:** {C.esc(rpt['uniqueness'])}")
+
+    if r["research"].get("alternatives"):
+        st.markdown(f"**Alternatives:** {', '.join(C.esc(a) for a in r['research']['alternatives'])}")
+
     with st.expander("Claims"):
         for c in r["claims"]:
             em = STATUS_EMOJI.get(c["verdict"], "?")
@@ -133,6 +164,11 @@ if st.button("Check it", type="primary") and url:
             st.markdown(f"**Rejected facts (quote not on page):** {len(r['dropped_facts'])}")
         if r["research"].get("rejected"):
             st.markdown(f"**Rejected research findings:** {len(r['research']['rejected'])}")
+            for item in r["research"]["rejected"]:
+                if isinstance(item, dict):
+                    st.caption(f"  {C.esc(item.get('reason',''))} — {C.esc(str(item.get('text',''))[:80])}")
+                else:
+                    st.caption(f"  {C.esc(str(item)[:80])}")
         if rpt.get("hooks_rejected"):
             st.markdown(f"**Rejected hooks:** {len(rpt['hooks_rejected'])}")
             for h in rpt["hooks_rejected"]:

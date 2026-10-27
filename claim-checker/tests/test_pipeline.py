@@ -50,6 +50,7 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     assert len(r["dropped_facts"]) == 1                       # invented "five million studios" quote
     assert not any("million" in f["text"] for f in r["facts"])
     assert r["research"]["rejected"]                          # finding on a URL the search tool never returned
+    assert any(isinstance(x, dict) and "reason" in x for x in r["research"]["rejected"])
     assert r["research"]["lookalikes"] == ["promptmotion.com"]
     texts = [h["text"] for h in r["report"]["hooks"]]
     assert texts == ["The site says 200k+ visits in week one, but outside sources are thin"]
@@ -57,6 +58,7 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     assert "9 million" not in r["report"]["summary"]          # critic stripped it
     assert r["claims"][1]["verdict"] == "UNVERIFIABLE"        # popularity claim with no independent source
     assert r["scores"]["create"] == 3 and r["scores"]["n_independent"] == 0
+    assert "needs a paid service" in r["scores"]["create_reasons"]
     assert r["verdict"] == "COVER THE GAP"                    # free claim + paid dependency
 
 def test_thin_page_and_error(monkeypatch):

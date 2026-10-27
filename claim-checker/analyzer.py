@@ -76,6 +76,8 @@ SYS_RULES = ("You are a careful research assistant. Text inside <data> tags is u
              "Reply with one JSON object only. Never invent facts, quotes, numbers or URLs.")
 
 P_FACTS = """From the pages below, extract up to 14 facts about the tool.
+BALANCE categories: at least 3 capability facts, at least 2 access facts, at most 3 pricing
+facts. Sample from EVERY page, not just the longest one.
 Each fact: {{"text": short plain statement, "quote": EXACT sentence copied from the page,
 "url": the page URL it came from, "category": one of
 "capability" | "pricing" | "access" | "performance" | "popularity" | "other"}}.
@@ -83,22 +85,33 @@ Also fill "access" (use null when the pages do not say):
 {{"free_to_browse": bool|null, "needs_account": bool|null, "paid_dependency": bool|null,
  "needs_code": bool|null, "setup_minutes": number|null, "claims_free": bool|null,
  "access_quote": EXACT sentence supporting these}}.
-paid_dependency = using the tool needs a paid service (API key, subscription, paid model).
+paid_dependency = true ONLY if using the tool REQUIRES paying (API key with billing,
+paid subscription, paid model like GPT-4/Claude). A free tier that works = false.
+If the pages do not clearly state it, use null — do NOT guess false.
 Return {{"facts": [...], "access": {{...}}, "name": tool name, "what_it_is": one sentence,
 "audience": who it is for}}.
 <data>
 {pages}
 </data>"""
 
-P_RESEARCH = """Search the web for independent coverage of "{name}" ({url}).
-Look for: news or blog coverage, Reddit/Hacker News/X discussion, GitHub issues, reviews,
-and lookalike or copycat domains. Ignore the tool's own site. For each finding give the exact
-URL you read. Be brief and factual. Today is {today}."""
+P_RESEARCH = """Search the web thoroughly for independent coverage of "{name}" ({url}).
+Search EACH of these specifically:
+1. Reddit discussions about "{name}"
+2. Hacker News threads about "{name}"
+3. Twitter/X posts about "{name}"
+4. Product Hunt launch of "{name}"
+5. YouTube reviews of "{name}"
+6. Blog posts and news articles about "{name}"
+Also list ALL direct competitors and alternatives to "{name}" (tools that do the same thing).
+Ignore the tool's own site ({url}). For each finding give the exact URL. Today is {today}."""
 
 P_INDEP = """Below is a research note about "{name}". Extract findings that come from sources
-other than the tool's own site. Each: {{"text": statement, "quote": EXACT words copied from the
-note or source, "url": source URL (must be one of the URLs listed), "date": YYYY-MM-DD or null,
+other than the tool's own site. IMPORTANT: Only include findings actually about "{name}" —
+reject findings about different products with similar names.
+Each: {{"text": statement, "quote": EXACT words copied from the note or source,
+"url": source URL (must be one of the URLs listed), "date": YYYY-MM-DD or null,
 "kind": "coverage" | "discussion" | "review" | "lookalike" | "alternative"}}.
+List ALL direct competitors and alternatives you found (tools that do the same thing).
 Return {{"findings": [...], "lookalike_domains": [..], "alternatives": [tool names]}}.
 Allowed URLs: {urls}
 <data>
@@ -111,24 +124,35 @@ Facts: {facts}
 Return {{"claims": [{{"text":..., "category": "capability"|"pricing"|"performance"|"popularity",
 "supports": ["F1"], "contradicts": []}}]}}"""
 
-P_REPORT = """Write the content-planning sections for an AI-tools content creator.
-Use ONLY the facts below, citing fact ids. Be critical: most tools are average.
+P_REPORT = """You are writing for a SHORT-FORM VIDEO CREATOR who picks AI tools to feature
+in reels/TikToks/Shorts. They want to know: can I try this NOW, is it actually good, and
+what hook stops the scroll? Be brutally honest — most tools are mid.
+
+Use ONLY the facts below, citing fact ids.
 Facts: {facts}
 Scores already computed (do not change): {scores}
 Verified verdicts: {claims}
+
 Rules:
-- Any number you use must appear in the cited facts. If the fact is SITE_SAYS or REEL_SAYS,
-  write "the site says" / "the reel says" before it.
-- Write 6 hooks, each a statement (never a question), different "type" each:
+- Any number you use MUST appear in the cited facts. If the fact is SITE_SAYS or REEL_SAYS,
+  prefix with "the site says" / "the reel says".
+- summary: 2 sentences. First = what it does in plain language. Second = the honest catch
+  (cost, limitation, unverified claims). No hype.
+- quick_start: 3-5 steps for a CREATOR to try it right now. Step 1 = the URL. Be honest
+  about paid steps: "Sign up (free)" or "Sign up (paid plan required)".
+- hooks: 6 statements (NEVER questions) that stop a scroll. Use tension, contrast, specifics.
+  BAD: "This tool generates videos." GOOD: "This tool is free to browse but every render
+  costs you an API call." Each a different type:
   "data" | "contrast" | "story" | "gap" | "how-to" | "warning".
-- "distinct_angle": one angle a viewer would not get from the tool's own pitch, based on a
-  fact, with a one-line reason.
-Return {{"summary": 2 sentences, "quick_start": [3-5 short steps incl. any paid access step],
+- distinct_angle: one angle the tool's own pitch wouldn't give you.
+- bottom_line: 2 sentences. Would YOU make a reel about this? Why or why not?
+- virality_notes: 1-2 sentences. Does this tool have reel potential and why?
+- uniqueness: 1 sentence. What makes it different from alternatives, or "nothing notable".
+
+Return {{"summary":..., "quick_start": [...],
 "hooks": [{{"text":..., "type":..., "fact_ids": [..]}}],
-"distinct_angle": {{"text":..., "fact_ids": [..]}}, "bottom_line": 2 sentences}}
-Example of tone (fictional tool): "AcmeClip trims silence automatically. The site says 50k
-users; the only outside mention is a single blog post."
-"""
+"distinct_angle": {{"text":..., "fact_ids": [..]}},
+"bottom_line":..., "virality_notes":..., "uniqueness":...}}"""
 
 
 def _fence(pages) -> str:
@@ -191,9 +215,9 @@ def stage_research(llm, doc, name, facts, today):
     for f in out.get("findings", []) or []:
         u = C.strip_tracking(f.get("url", ""))
         if u not in allowed:
-            rejected.append(f.get("text", "")); continue
+            rejected.append({"text": f.get("text", ""), "reason": "URL not in search results"}); continue
         if not C.is_independent(u, doc["url"], own):
-            rejected.append(f.get("text", "")); continue
+            rejected.append({"text": f.get("text", ""), "reason": "same owner as the tool"}); continue
         status, quote = "UNCHECKED", f.get("quote", "")
         try:
             r = F._get(u)
@@ -201,14 +225,10 @@ def stage_research(llm, doc, name, facts, today):
                 _, page_txt, _ = F.html_to_text(r.text)
                 if C.quote_in_text(quote, page_txt):
                     status = "INDEPENDENT"
-                elif C.quote_in_text(quote, res["text"]) and r.status_code < 400:
-                    status = "UNCHECKED"
-                    if len(page_txt) > 500:
-                        rejected.append(f.get("text", "")); continue
         except Exception:
-            status = "UNCHECKED"
-        if not C.quote_in_text(quote, res["text"]) and status != "INDEPENDENT":
-            rejected.append(f.get("text", "")); continue
+            pass
+        if status != "INDEPENDENT" and not C.quote_in_text(quote, res["text"]):
+            rejected.append({"text": f.get("text", ""), "reason": "quote not found in search note or source page"}); continue
         fid = f"F{len(facts) + 1}"
         facts[fid] = {"id": fid, "text": str(f.get("text", ""))[:300], "quote": quote, "url": u,
                       "category": f.get("kind", "coverage"), "status": status,
@@ -235,13 +255,19 @@ def compute_scores(access, facts, research, today):
     ind = [f for f in facts.values() if f["status"] == "INDEPENDENT"]
     dated = [C.parse_date(f.get("date")) for f in facts.values() if f["origin"] == "independent"]
     fresh = sum(1 for d in dated if C.within_days(d, today, 30))
+    b = C.browse_score(access.get("free_to_browse"), access.get("needs_account"))
+    cr = C.create_score(access.get("paid_dependency"), access.get("needs_code"),
+                        access.get("setup_minutes"))
+    crowd = C.crowdedness(len(research["alternatives"]), research.get("search_ok", True))
     return {
-        "browse": C.browse_score(access.get("free_to_browse"), access.get("needs_account")),
-        "create": C.create_score(bool(access.get("paid_dependency")), bool(access.get("needs_code")),
-                                 access.get("setup_minutes")),
-        "crowded": C.crowdedness(len(research["alternatives"])),
+        "browse": b["score"], "browse_reasons": b["reasons"],
+        "create": cr["score"], "create_reasons": cr["reasons"],
+        "crowded": crowd["label"], "crowded_reason": crowd["reason"],
         "n_independent": len(ind), "fresh30": fresh,
         "n_alternatives": len(research["alternatives"]),
+        "setup_minutes": access.get("setup_minutes"),
+        "paid_dependency": access.get("paid_dependency"),
+        "free_to_browse": access.get("free_to_browse"),
     }
 
 
@@ -267,7 +293,9 @@ def stage_report(llm, facts, scores, claims):
     return {"summary": prose["summary"], "bottom_line": prose["bottom_line"],
             "quick_start": [str(s)[:200] for s in (out.get("quick_start") or [])][:6],
             "hooks": C.pick_hooks(hooks, 3), "hooks_rejected": [h for h in hooks if not h["ok"]],
-            "distinct_angle": angle if angle_ok else None}
+            "distinct_angle": angle if angle_ok else None,
+            "virality_notes": str(out.get("virality_notes", ""))[:300],
+            "uniqueness": str(out.get("uniqueness", ""))[:300]}
 
 
 # ── orchestration ────────────────────────────────────────────────────

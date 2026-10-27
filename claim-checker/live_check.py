@@ -18,7 +18,8 @@ def checklist(r, name):
     solid = [f for f in r["facts"] if f["status"] == "INDEPENDENT"]
     ids = {f["id"] for f in r["facts"]}
     return {
-        "scores within range": 1 <= r["scores"]["browse"] <= 5 and 1 <= r["scores"]["create"] <= 5,
+        "scores within range": (1 <= r["scores"]["browse"] <= 5 and 1 <= r["scores"]["create"] <= 5
+                                and r["scores"]["crowded"] in ("low", "medium", "high", "unknown")),
         "every independent fact has a URL on a different owner": all(f["url"] for f in solid),
         "every claim cites existing facts": all(set(c["evidence_ids"]) <= ids for c in r["claims"]),
         "no hook has an unattributed or invented number": all(h["ok"] for h in r["report"]["hooks"]),

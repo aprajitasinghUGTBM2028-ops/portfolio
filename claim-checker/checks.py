@@ -163,26 +163,54 @@ def clamp(x, lo, hi):
         return lo
 
 
-def browse_score(free_to_browse, needs_account) -> int:
+def browse_score(free_to_browse, needs_account) -> dict:
+    reasons = []
     if free_to_browse is False:
-        return 1
-    s = 5 - (1 if needs_account else 0) - (1 if free_to_browse is None else 0)
-    return clamp(s, 1, 5)
-
-
-def create_score(paid_dep: bool, needs_code: bool, setup_minutes) -> int:
+        return {"score": 1, "reasons": ["not free to browse"]}
     s = 5
-    if paid_dep:
-        s -= 2
-    if needs_code:
+    if free_to_browse is None:
         s -= 1
+        reasons.append("browsing access not stated")
+    if needs_account is True:
+        s -= 1
+        reasons.append("needs account signup")
+    elif needs_account is None:
+        s -= 1
+        reasons.append("account requirement not stated")
+    return {"score": clamp(s, 1, 5), "reasons": reasons}
+
+
+def create_score(paid_dep, needs_code, setup_minutes) -> dict:
+    reasons = []
+    s = 5
+    if paid_dep is True:
+        s -= 2
+        reasons.append("needs a paid service")
+    elif paid_dep is None:
+        s -= 1
+        reasons.append("paid dependency not stated")
+    if needs_code is True:
+        s -= 1
+        reasons.append("needs coding")
+    elif needs_code is None:
+        s -= 1
+        reasons.append("coding requirement not stated")
     if isinstance(setup_minutes, (int, float)) and setup_minutes > 30:
         s -= 1
-    return clamp(s, 1, 5)
+        reasons.append(f"setup takes ~{int(setup_minutes)} min")
+    return {"score": clamp(s, 1, 5), "reasons": reasons}
 
 
-def crowdedness(n_alternatives: int) -> str:
-    return "low" if n_alternatives <= 1 else "medium" if n_alternatives <= 4 else "high"
+def crowdedness(n_alternatives, search_ok=True) -> dict:
+    if not search_ok:
+        return {"label": "unknown", "reason": "search could not check alternatives"}
+    if n_alternatives == 0:
+        return {"label": "unknown", "reason": "no alternatives surfaced in search"}
+    if n_alternatives == 1:
+        return {"label": "low", "reason": "1 alternative found"}
+    if n_alternatives <= 4:
+        return {"label": "medium", "reason": f"{n_alternatives} alternatives found"}
+    return {"label": "high", "reason": f"{n_alternatives}+ alternatives found"}
 
 
 def levenshtein(a: str, b: str) -> int:
@@ -240,7 +268,7 @@ def decide_verdict(s: dict):
     if s.get("paid_dep") and s.get("claims_free"):
         return "COVER THE GAP", "The tool is described as free, but using it needs a paid service."
     if s.get("n_independent", 0) == 0 and s.get("n_self_reported_numbers", 0) >= 2:
-        return "COVER THE GAP", "The headline numbers come only from the tool's own pages."
+        return "INSUFFICIENT EVIDENCE", "The headline numbers come only from the tool's own pages — no independent source verified them."
     if s.get("n_independent", 0) == 0:
         return "INSUFFICIENT EVIDENCE", "No independent source could be verified."
     if s.get("create", 5) <= 1 and s.get("browse", 5) <= 2:
