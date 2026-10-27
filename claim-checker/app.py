@@ -37,8 +37,7 @@ def api_key():
         parts.append(st.secrets.get(s, ""))
     key = "".join(parts)
     if not key.startswith("sk-"):
-        st.error("OpenAI key not configured.")
-        st.stop()
+        return ""
     return key
 
 
@@ -57,6 +56,13 @@ if pw:
             st.warning("Wrong password.")
         st.stop()
 
+_key = api_key()
+if _key:
+    st.success("API configured")
+else:
+    st.error("OpenAI API key not configured. Add it in app secrets.")
+    st.stop()
+
 url = st.text_input("Tool URL", placeholder="https://example.com or github.com/org/repo")
 col_cap, col_screen = st.columns(2)
 caption = col_cap.text_area("Caption (for Instagram reels)", height=80)
@@ -66,10 +72,9 @@ if st.button("Check it", type="primary") and url:
     if not _check_cap():
         st.error(f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow.")
         st.stop()
-    key = api_key()
     status = st.empty()
     try:
-        r = analyzer.analyze(url, analyzer.OpenAILLM(key), caption, on_screen,
+        r = analyzer.analyze(url, analyzer.OpenAILLM(_key), caption, on_screen,
                              progress=lambda s: status.write(s))
     except Exception as e:
         st.error(C.redact_secrets(str(e)))
