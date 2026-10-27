@@ -216,11 +216,11 @@ If this doesn't appear to be an AI tool, return:
 
 
 def verify_claims(client, claims_data: dict, content: dict) -> dict:
-    """Verify each claim and score tryability."""
+    """Verify claims with live web search, structured evidence, and hook validation."""
 
     claims_json = json.dumps(claims_data, indent=2)
 
-    # Include pricing signals
+    # Build source text with sub-pages
     pricing_info = ""
     if content.get("source_type") == "web" and content.get("has_pricing_signals"):
         pricing_info = "\nNote: The page contains pricing-related language."
@@ -229,106 +229,116 @@ def verify_claims(client, claims_data: dict, content: dict) -> dict:
         pricing_info = f"\nGitHub stats — Stars: {meta.get('stars', '?')}, Language: {meta.get('language', '?')}, Last push: {meta.get('last_push', '?')}"
 
     source_text = ""
+    subpage_text = ""
     if content.get("source_type") == "github":
         source_text = content.get("readme", "")[:6000]
     elif content.get("source_type") == "web":
         source_text = content.get("text", "")[:6000]
+        subpage_text = content.get("subpage_text", "")[:6000]
     elif content.get("source_type") == "instagram":
         source_text = content.get("caption", content.get("text", ""))[:3000]
 
     tool_type = claims_data.get("tool_type", "unknown")
     key_data = json.dumps(claims_data.get("key_data_points", []))
 
-    prompt = f"""You are a skeptical AI tool investigator. A content creator pasted a URL and wants to know: is this tool legit, or is it hype? Your job is to be HONEST, not generous.
+    subpage_section = ""
+    if subpage_text:
+        fetched_labels = [sp["label"] for sp in content.get("subpages_fetched", [])]
+        subpage_section = f"""
+SUB-PAGES FETCHED ({', '.join(fetched_labels)}):
+{subpage_text}
+"""
 
-=== THE #1 MISTAKE YOU MUST AVOID ===
+    prompt = f"""You are a skeptical AI tool investigator with web search. A content creator pasted a URL. Your job: check if it's legit or hype.
 
-CIRCULAR CONFIRMATION. This means marking a claim "confirmed" just because the tool's own website says it. A website saying "we have 10,000 users" is a CLAIM, not proof. The whole point of this tool is to check whether marketing claims are real.
+=== EVIDENCE RULES ===
 
-Here is what GOOD vs BAD looks like:
-
-CLAIM: "Over 200 curated motion design examples"
-  BAD verdict: "confirmed — The source page states there are 103 Product UI and 96 Kinetic type entries"
-  WHY BAD: You just read the website's own number back. That's the claim itself, not evidence.
-  GOOD verdict: "unverified — The page lists 103 + 96 = 199 entries in its categories. I cannot independently verify these are real curated examples vs auto-generated filler. No Reddit/Twitter/YouTube discussion found to corroborate."
-
-CLAIM: "AI-generated animations from text prompts"
-  BAD verdict: "confirmed — The website describes AI-generated motion graphics"
-  WHY BAD: The website CLAIMING it does something is not proof it does it.
-  GOOD verdict: "partially_true — The site shows video thumbnails but I found no demo, no user reviews on Reddit/Twitter/Product Hunt, and no YouTube walkthroughs. The underlying claim is plausible (tools like Runway do this) but THIS specific tool has zero independent verification."
-
-CLAIM: "Free to use"
-  GOOD verdict: "confirmed — Site says 'free' and there's no paywall, login gate, or pricing page visible. Consistent with a gallery/showcase site that monetizes differently or is a side project."
+1. The HOMEPAGE and SUB-PAGES below are what the tool CLAIMS. A feature visible on the official page (a Customize page, a Subscribe box, a pricing table) is CONFIRMED as existing. But claims about quality, results, or popularity need THIRD-PARTY evidence.
+2. YOU HAVE WEB SEARCH. Use it. Search for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube. Search "[tool name] review", "[tool name] reddit", "[tool name] site:reddit.com", etc.
+3. Use these EXACT statuses for each claim:
+   - CONFIRMED: Feature exists on the official page, OR third-party source backs it up.
+   - REPORTED: A third party mentioned it but you can't verify the specific detail.
+   - SELF-REPORTED: The tool/creator's own number or claim. Label it as such.
+   - NOT FOUND: You searched and found nothing. "NOT FOUND" ≠ "false" — say what you searched.
+   - CONTRADICTED: Evidence contradicts the claim. Cite the contradiction.
+4. NEVER write "I checked Reddit" or "I searched Product Hunt" unless you actually ran that search and its result is in your evidence. If you didn't search, don't claim you did.
+5. Every number needs a source and a date. If the homepage says 233 but the blog says 199, show both.
+6. Read the sub-pages below for features the homepage doesn't mention (customize pages, blog analysis, pricing details, sponsor info).
+7. Dig for a distinct statistic — the site's blog or analysis pages often have one (e.g. "33 people used the same prompt, likes ranged 0 to 17,023").
+8. Split "browse and copy" from "make a video" in setup. Give each its own time and cost. If making content requires a paid account (e.g. Claude Pro), list it as a separate step with cost.
+9. Strip tracking parameters (?utm_...) from every source URL you output.
+10. Search for lookalike sites with similar names and list them. Say they are not the official site.
 
 === SCORING RULES (most tools score 3-6, not 7-10) ===
 
-VIRALITY SCORES (1-10):
-- 1-2: Boring, no visual output, developer-only CLI tool
-- 3-4: Decent but nothing new. Another AI wrapper, another chatbot, another "generate images" tool.
-- 5-6: Has a unique angle OR produces genuinely interesting output. Most good tools land here.
-- 7-8: Genuinely novel concept with proven viral potential. Think: first time someone showed AI removing objects from video.
-- 9-10: Cultural moment. Almost never. Reserved for tools that broke Twitter/TikTok.
-A niche gallery = 3-5 range. A wrapper around GPT = 3-4. An AI image generator = 4-6 unless it does something truly new.
+VIRALITY (1-10): Every score MUST cite evidence. No evidence = no inflation.
+- 1-2: Boring CLI tool, no visual output
+- 3-4: Nothing new — another wrapper, another chatbot
+- 5-6: Unique angle OR interesting output. Most good tools land here.
+- 7-8: Genuinely novel with proven viral potential. RARE.
+- 9-10: Cultural moment. Almost never.
 
-HYPE SCORE (1-10):
-- 1-3: Honest, understated marketing. Open source project with just a README.
-- 4-6: Normal marketing language. Most tools are here. Claims features, shows demos, uses some superlatives.
-- 7-8: Heavy marketing with unverified claims. "Revolutionary", "the future of X", big user numbers with no proof.
-- 9-10: Outright deceptive. Fake screenshots, impossible claims, purchased reviews.
+HYPE (1-10):
+- 1-3: Honest, understated. Open source README.
+- 4-6: Normal marketing. Most tools.
+- 7-8: Heavy unverified claims. "Revolutionary", big numbers with no proof.
+- 9-10: Outright deceptive.
 
-CONTENT VERDICT:
-- "COVER IT" = genuinely unique angle + data to back it up + audience would care. RARE.
-- "COVER THE GAP" = interesting enough but needs the creator to add their own angle. MOST COMMON.
+VERDICT:
+- "COVER IT" = unique angle + data + audience cares. RARE.
+- "COVER THE GAP" = interesting but creator needs their own angle. MOST COMMON.
 - "SKIP" = nothing new, no data, audience won't care.
 
-=== GUARDRAILS ===
-
-1. SOURCE CONTENT is what the tool CLAIMS, not proof. Read it for data points and features, but treat every claim as "the website says X" — then ask "but is X actually true?"
-2. YOU HAVE WEB SEARCH. Use it. For each claim, ACTUALLY SEARCH for the tool on Reddit, Twitter/X, Hacker News, Product Hunt, YouTube, and any relevant forums. Search for "[tool name] review", "[tool name] reddit", "[tool name] product hunt", etc.
-3. ONLY mark "confirmed" when your web search found INDEPENDENT evidence: Reddit/HN/Twitter posts, Product Hunt listings, YouTube reviews, GitHub stars, app store reviews, blog posts from real users, or the technical architecture making the claim necessarily true.
-4. If your web search found nothing → "unverified" with evidence: "Searched Reddit, Hacker News, Product Hunt, YouTube — zero independent mentions found. Only source is the tool's own website."
-5. CITE what you find. "Found 3 Reddit posts in r/artificial discussing this tool (oldest from Jan 2024)" or "Product Hunt launch with 245 upvotes" — real data, real numbers.
-6. NEVER INVENT features or steps not mentioned in the source. "Not mentioned on the page" beats a guess.
-7. If the source says "free" or "It's free" → free_tier is "yes", free_tier_detail quotes it. Only say "unclear" if pricing is truly never mentioned.
-8. The tool type from extraction was: {tool_type} — verify this. A gallery is NOT a generator.
-9. Check for name lookalikes (e.g. "Motion" the design tool vs "PromptMotion" the gallery). If confusable, set lookalike_warning. Otherwise set it to null.
-
 === INPUTS ===
+
+Tool type from extraction: {tool_type}
 
 EXTRACTED CLAIMS:
 {claims_json}
 
-KEY DATA POINTS FROM SOURCE:
+KEY DATA POINTS:
 {key_data}
 
-SOURCE CONTENT (this is what the website says — treat it as marketing, not truth):
+HOMEPAGE CONTENT:
 {source_text}
 {pricing_info}
+{subpage_section}
 
 === OUTPUT FORMAT ===
 
-Return ONLY valid JSON matching this structure:
+Return ONLY valid JSON. The "evidence_list" is your structured fact sheet — every fact you cite anywhere must appear here first, with a source URL. Hooks may ONLY use facts from this list.
+
 {{
   "tool_name": "{claims_data.get('tool_name', 'Unknown')}",
+  "evidence_list": [
+    {{
+      "fact": "what you found",
+      "status": "CONFIRMED|REPORTED|SELF-REPORTED|NOT FOUND|CONTRADICTED",
+      "source_url": "the URL where you found this (stripped of UTM params), or 'official site' for features on the page, or null if not found",
+      "date": "when this was published/found, or null"
+    }}
+  ],
   "verified_claims": [
     {{
       "claim": "the claim text",
-      "verdict": "confirmed|partially_true|exaggerated|unverified",
-      "evidence": "INDEPENDENT evidence or 'Only source is the website itself — no Reddit/Twitter/YouTube discussion found'",
-      "red_flags": ["specific concrete flag, or empty array"]
+      "verdict": "CONFIRMED|REPORTED|SELF-REPORTED|NOT FOUND|CONTRADICTED",
+      "evidence": "cite from evidence_list — what you found and where",
+      "red_flags": ["specific flag or empty array"]
     }}
   ],
   "tryability": {{
     "free_tier": "yes|no|freemium|unclear",
-    "free_tier_detail": "quote what the source says about pricing",
-    "setup_time_minutes": 5,
+    "free_tier_detail": "quote what the source says",
+    "setup_browse": {{"time": "X min", "cost": "$0", "steps": "what browsing/copying involves"}},
+    "setup_create": {{"time": "X min", "cost": "$Y/mo for [service]", "steps": "what actually making content involves, including paid dependencies"}},
     "visible_result": "yes|no|unclear",
-    "blockers": ["only blockers found in source content"],
+    "blockers": ["only real blockers"],
     "score": 4
   }},
   "setup_guide": [
-    "Step 1: ...",
-    "Step 2: ..."
+    "Step 1: Browse — ...",
+    "Step 2: Copy a prompt — ...",
+    "Step 3: To make a video — ... (requires [paid service] at $X/mo)"
   ],
   "virality": {{
     "visual_wow": 5,
@@ -336,30 +346,87 @@ Return ONLY valid JSON matching this structure:
     "trend_fit": 5,
     "uniqueness": 4,
     "virality_score": 4,
-    "virality_explanation": "one sentence with specific details — remember most tools score 3-6"
+    "virality_explanation": "cite evidence for each score"
   }},
   "comparison": {{
-    "similar_to": "Think of it as [known tool] but for [specific niche]",
-    "what_makes_it_different": "one sentence based on source content",
+    "similar_to": "Think of it as [known tool] but for [niche]",
+    "what_makes_it_different": "based on source content",
     "who_is_this_for": "specific person + specific need",
-    "lookalike_warning": "warning text or null"
+    "lookalike_warning": "list any similarly-named sites found and clarify they are not official, or null",
+    "lookalike_sites": ["site1.com", "site2.com"]
   }},
   "content_verdict": {{
     "verdict": "COVER IT|COVER THE GAP|SKIP",
-    "reason": "2-3 sentences. Be honest. Most tools are COVER THE GAP at best.",
-    "hook": "A reel hook using ACTUAL NUMBERS or DATA from the source. Not a description of the tool. Example: '199 AI animations, zero Reddit posts. I checked if this gallery is real or just a pretty landing page.' GENERIC HOOKS LIKE 'Explore this amazing tool' ARE BANNED.",
+    "reason": "2-3 sentences citing evidence_list entries",
+    "hooks": [
+      "Hook 1 — must use ONLY facts from evidence_list. Include specific numbers.",
+      "Hook 2 — different angle, still evidence-backed",
+      "Hook 3 — third angle"
+    ],
     "reel_format": "suggested format"
   }},
   "hype_score": 5,
-  "summary": "2-3 honest sentences. What's real, what's unverified, and the bottom line."
+  "summary": "2-3 honest sentences. What's confirmed, what's self-reported, what's not found."
 }}"""
 
     text = generate_with_search(client, prompt, prefer_model="gpt-4o")
 
     try:
-        return _parse_json_response(text)
+        result = _parse_json_response(text)
     except (json.JSONDecodeError, ValueError):
         return {"error": "Could not parse verification response", "raw": text}
+
+    # Hook validation pass: check hooks only use facts from evidence_list
+    result = _validate_hooks(client, result)
+
+    return result
+
+
+def _validate_hooks(client, result: dict) -> dict:
+    """Second pass: check that hooks only use facts from the evidence list."""
+    hooks = result.get("content_verdict", {}).get("hooks", [])
+    evidence = result.get("evidence_list", [])
+    if not hooks or not evidence:
+        return result
+
+    evidence_json = json.dumps(evidence, indent=2)
+    hooks_json = json.dumps(hooks, indent=2)
+
+    prompt = f"""You are a fact-checker. Below is a list of verified evidence and a list of reel hooks.
+Check each hook: does every number, claim, and action in the hook appear in the evidence list?
+
+EVIDENCE LIST:
+{evidence_json}
+
+HOOKS:
+{hooks_json}
+
+For each hook, return:
+- "valid": true if every fact in the hook is backed by the evidence list
+- "valid": false if the hook contains a number, claim, or action NOT in the evidence
+- "fix": if invalid, rewrite the hook using ONLY facts from the evidence list
+
+Return ONLY valid JSON:
+{{
+  "hook_checks": [
+    {{"hook_index": 0, "valid": true}},
+    {{"hook_index": 1, "valid": false, "problem": "claims Reddit search but no Reddit evidence exists", "fix": "rewritten hook using only evidence"}}
+  ]
+}}"""
+
+    try:
+        text = generate(client, prompt)
+        checks = _parse_json_response(text)
+        validated_hooks = list(hooks)
+        for check in checks.get("hook_checks", []):
+            idx = check.get("hook_index", -1)
+            if not check.get("valid") and check.get("fix") and 0 <= idx < len(validated_hooks):
+                validated_hooks[idx] = check["fix"]
+        if "content_verdict" in result:
+            result["content_verdict"]["hooks"] = validated_hooks
+    except Exception:
+        pass
+    return result
 
 
 def _parse_json_response(text: str) -> dict:

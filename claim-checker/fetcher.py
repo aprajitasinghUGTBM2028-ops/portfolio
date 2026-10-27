@@ -1,12 +1,13 @@
 """
 fetcher.py — Fetches and extracts text content from URLs.
 Handles: landing pages, GitHub READMEs, and generic web pages.
+Deep-fetches internal links one level deep (blog, pricing, docs, etc.).
 """
 
 import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin, urlunparse, parse_qs, urlencode
 
 
 HEADERS = {
@@ -15,6 +16,22 @@ HEADERS = {
                   "Chrome/120.0.0.0 Safari/537.36"
 }
 TIMEOUT = 15
+
+SUBPAGE_KEYWORDS = [
+    "pricing", "price", "plan", "blog", "about", "docs", "documentation",
+    "customize", "templates", "template", "sponsor", "faq", "features",
+    "changelog", "analysis", "report", "review", "guide",
+]
+
+
+def strip_utm(url: str) -> str:
+    """Remove UTM and tracking parameters from a URL."""
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query, keep_blank_values=False)
+    clean = {k: v for k, v in params.items()
+             if not k.lower().startswith(("utm_", "ref", "source", "fbclid", "gclid"))}
+    cleaned_query = urlencode(clean, doseq=True)
+    return urlunparse(parsed._replace(query=cleaned_query))
 
 
 def classify_url(url: str) -> str:
@@ -118,8 +135,86 @@ def fetch_github(url: str) -> dict:
     }
 
 
+def _extract_page_text(resp) -> dict:
+    """Parse a response into title, meta_description, text, and internal links."""
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    # Find internal links before stripping nav
+    internal_links = []
+    base_parsed = urlparse(str(resp.url))
+    base_domain = base_parsed.hostname or ""
+    for a_tag in soup.find_all("a", href=True):
+        href = a_tag["href"]
+        full_url = urljoin(str(resp.url), href)
+        link_parsed = urlparse(full_url)
+        link_domain = link_parsed.hostname or ""
+        if link_domain == base_domain and link_parsed.path != base_parsed.path:
+            path_lower = link_parsed.path.lower().strip("/")
+            label = (a_tag.get_text(strip=True) or path_lower)[:60]
+            if any(kw in path_lower for kw in SUBPAGE_KEYWORDS):
+                internal_links.append({
+                    "url": strip_utm(full_url),
+                    "path": link_parsed.path,
+                    "label": label,
+                })
+
+    # Remove script, style, nav, footer clutter
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+        tag.decompose()
+
+    title = soup.title.string.strip() if soup.title and soup.title.string else ""
+
+    meta_desc = ""
+    meta_tag = soup.find("meta", attrs={"name": "description"})
+    if meta_tag:
+        meta_desc = meta_tag.get("content", "")
+
+    text = soup.get_text(separator="\n", strip=True)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # Deduplicate internal links by path
+    seen_paths = set()
+    unique_links = []
+    for link in internal_links:
+        if link["path"] not in seen_paths:
+            seen_paths.add(link["path"])
+            unique_links.append(link)
+
+    return {
+        "title": title,
+        "meta_description": meta_desc,
+        "text": text,
+        "internal_links": unique_links[:10],
+    }
+
+
+def _fetch_subpages(links: list, max_pages: int = 5) -> list:
+    """Fetch up to max_pages internal sub-pages and return their text."""
+    subpages = []
+    for link in links[:max_pages]:
+        try:
+            resp = requests.get(link["url"], headers=HEADERS, timeout=10,
+                                allow_redirects=True)
+            if resp.ok:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+                    tag.decompose()
+                text = soup.get_text(separator="\n", strip=True)
+                text = re.sub(r'\n{3,}', '\n\n', text)[:4000]
+                if len(text) > 100:
+                    subpages.append({
+                        "url": strip_utm(link["url"]),
+                        "path": link["path"],
+                        "label": link["label"],
+                        "text": text,
+                    })
+        except requests.exceptions.RequestException:
+            continue
+    return subpages
+
+
 def fetch_webpage(url: str) -> dict:
-    """Fetch and extract text from a generic web page."""
+    """Fetch a web page and its key sub-pages (blog, pricing, docs, etc.)."""
     try:
         resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
 
@@ -129,41 +224,37 @@ def fetch_webpage(url: str) -> dict:
             return {"ok": False, "error": f"Access denied (403): {url}"}
         resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+        page_data = _extract_page_text(resp)
 
-        # Remove script, style, nav, footer clutter
-        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
-            tag.decompose()
-
-        title = soup.title.string.strip() if soup.title and soup.title.string else ""
-
-        # Extract meta description
-        meta_desc = ""
-        meta_tag = soup.find("meta", attrs={"name": "description"})
-        if meta_tag:
-            meta_desc = meta_tag.get("content", "")
-
-        # Get main text content
-        text = soup.get_text(separator="\n", strip=True)
-        # Collapse whitespace
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        text = text[:12000]  # cap for LLM context
+        main_text = page_data["text"][:12000]
 
         # Check for pricing signals
         pricing_keywords = ["pricing", "free tier", "free plan", "pro plan",
                            "enterprise", "api key", "token", "credit",
-                           "subscribe", "sign up", "waitlist"]
-        has_pricing_signals = any(kw in text.lower() for kw in pricing_keywords)
+                           "subscribe", "sign up", "waitlist", "free"]
+        has_pricing_signals = any(kw in main_text.lower() for kw in pricing_keywords)
+
+        # Deep fetch: follow internal links one level
+        subpages = _fetch_subpages(page_data["internal_links"])
+
+        # Build combined text with clear page boundaries
+        subpage_text = ""
+        subpage_urls = []
+        for sp in subpages:
+            subpage_text += f"\n\n--- SUB-PAGE: {sp['label']} ({sp['url']}) ---\n{sp['text']}"
+            subpage_urls.append({"label": sp["label"], "url": sp["url"]})
 
         return {
             "ok": True,
             "source_type": "web",
-            "url": url,
-            "title": title,
-            "meta_description": meta_desc,
-            "text": text,
+            "url": strip_utm(url),
+            "title": page_data["title"],
+            "meta_description": page_data["meta_description"],
+            "text": main_text,
+            "subpage_text": subpage_text[:8000],
+            "subpages_fetched": subpage_urls,
             "has_pricing_signals": has_pricing_signals,
-            "final_url": str(resp.url),  # after redirects
+            "final_url": strip_utm(str(resp.url)),
         }
 
     except requests.exceptions.Timeout:

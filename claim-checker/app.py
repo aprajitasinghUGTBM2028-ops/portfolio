@@ -35,8 +35,10 @@ st.markdown("""
     .verdict-gap { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; border-radius: 6px; }
     .verdict-skip { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; border-radius: 6px; }
     .claim-confirmed { color: #28a745; font-weight: 600; }
-    .claim-partial { color: #ffc107; font-weight: 600; }
-    .claim-exaggerated { color: #dc3545; font-weight: 600; }
+    .claim-reported { color: #17a2b8; font-weight: 600; }
+    .claim-self-reported { color: #ffc107; font-weight: 600; }
+    .claim-not-found { color: #6c757d; font-weight: 600; }
+    .claim-contradicted { color: #dc3545; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -160,6 +162,10 @@ if check_btn and url:
             st.caption(f"⭐ {meta.get('stars', '?')} stars | {meta.get('language', '?')} | Last push: {str(meta.get('last_push', '?'))[:10]}")
         elif content["source_type"] == "web":
             st.write(f"Fetched page: **{content.get('title', url)}**")
+            subpages = content.get("subpages_fetched", [])
+            if subpages:
+                labels = [sp.get("label", sp.get("url", "?")) for sp in subpages]
+                st.caption(f"Sub-pages crawled: {', '.join(labels)}")
         elif content["source_type"] == "instagram":
             if content.get("auto_fetched"):
                 method = content.get("fetch_method", "")
@@ -360,22 +366,38 @@ if check_btn and url:
         if comp.get("who_is_this_for"):
             st.caption(comp["who_is_this_for"])
 
+        # ── Evidence List ──────────────────────────────────────────
+        evidence_list = result.get("evidence_list", [])
+        if evidence_list:
+            with st.expander("Evidence Sheet (what was actually found)", expanded=False):
+                for ev in evidence_list:
+                    status = ev.get("status", "?")
+                    status_icons = {
+                        "CONFIRMED": "✅", "REPORTED": "📰",
+                        "SELF-REPORTED": "⚠️", "NOT FOUND": "❓",
+                        "CONTRADICTED": "❌",
+                    }
+                    icon = status_icons.get(status, "•")
+                    src = ev.get("source_url") or ""
+                    date = ev.get("date") or ""
+                    date_str = f" ({date})" if date else ""
+                    st.markdown(f"{icon} **{status}** — {ev.get('fact', '')}")
+                    if src and src not in ("null", "None"):
+                        st.caption(f"Source: {src}{date_str}")
+
         # ── Claims & Verification ───────────────────────────────────
         st.markdown("### Claim Check")
         for i, vc in enumerate(result.get("verified_claims", []), 1):
-            verdict = vc.get("verdict", "unverified")
-            if verdict == "confirmed":
-                icon = "✅"
-            elif verdict == "partially_true":
-                icon = "⚠️"
-            elif verdict == "unverified":
-                icon = "❓"
-            else:
-                icon = "❌"
+            verdict = vc.get("verdict", "NOT FOUND").upper()
+            icon_map = {
+                "CONFIRMED": "✅", "REPORTED": "📰",
+                "SELF-REPORTED": "⚠️", "NOT FOUND": "❓",
+                "CONTRADICTED": "❌",
+            }
+            icon = icon_map.get(verdict, "❓")
 
-            verdict_label = verdict.upper().replace("_", " ")
             st.markdown(f"**{i}. {vc['claim']}**")
-            st.markdown(f"{icon} **{verdict_label}** — {vc.get('evidence', '')}")
+            st.markdown(f"{icon} **{verdict}** — {vc.get('evidence', '')}")
             flags = vc.get("red_flags", [])
             if flags:
                 st.markdown(f"🚩 *{', '.join(flags)}*")
@@ -387,19 +409,32 @@ if check_btn and url:
         if isinstance(score, (int, float)):
             st.progress(min(int(score), 5) / 5, text=f"Tryability: {int(score)}/5")
 
-        col_a, col_b, col_c = st.columns(3)
+        col_a, col_b = st.columns(2)
         free_tier = tryability.get("free_tier", "?")
         free_detail = tryability.get("free_tier_detail", "")
         col_a.metric("Free Tier", free_tier)
-        setup_mins = tryability.get("setup_time_minutes", "?")
-        if isinstance(setup_mins, (int, float)):
-            col_b.metric("Setup Time", f"~{int(setup_mins)} min")
-        else:
-            col_b.metric("Setup Time", str(setup_mins))
-        col_c.metric("Quick Result?", tryability.get("visible_result", "?"))
+        col_b.metric("Quick Result?", tryability.get("visible_result", "?"))
 
         if free_detail:
             st.caption(f"Free tier: {free_detail}")
+
+        # Split tryability: browse vs create
+        setup_browse = tryability.get("setup_browse", {})
+        setup_create = tryability.get("setup_create", {})
+        if setup_browse or setup_create:
+            bc1, bc2 = st.columns(2)
+            with bc1:
+                st.markdown("**Browse & Copy**")
+                if setup_browse:
+                    st.markdown(f"Time: {setup_browse.get('time', '?')} | Cost: {setup_browse.get('cost', '$0')}")
+                    if setup_browse.get("steps"):
+                        st.caption(setup_browse["steps"])
+            with bc2:
+                st.markdown("**Make Content**")
+                if setup_create:
+                    st.markdown(f"Time: {setup_create.get('time', '?')} | Cost: {setup_create.get('cost', '?')}")
+                    if setup_create.get("steps"):
+                        st.caption(setup_create["steps"])
 
         blockers = tryability.get("blockers", [])
         if blockers:
@@ -456,10 +491,20 @@ if check_btn and url:
 </div>
 """, unsafe_allow_html=True)
 
-        if cv.get("hook"):
+        hooks = cv.get("hooks", [])
+        if hooks:
+            st.markdown("**Reel Hooks (evidence-backed):**")
+            for i, h in enumerate(hooks, 1):
+                st.markdown(f"{i}. *\"{h}\"*")
+        elif cv.get("hook"):
             st.markdown(f'**Reel Hook:** *"{cv["hook"]}"*')
         if cv.get("reel_format"):
             st.caption(f"Suggested format: {cv['reel_format']}")
+
+        # Lookalike sites warning
+        lookalikes = comp.get("lookalike_sites", [])
+        if lookalikes:
+            st.warning(f"**Lookalike sites found:** {', '.join(lookalikes)} — these are NOT the official tool.")
 
         summary = result.get("summary", "")
         if summary:
