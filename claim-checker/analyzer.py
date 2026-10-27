@@ -5,22 +5,42 @@ score tryability, and produce a content verdict.
 
 import os
 import json
-import google.generativeai as genai
+import time
+from google import genai
+
+MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
 
-def get_model():
-    """Initialize and return the Gemini model."""
+def get_client():
+    """Initialize and return the Gemini client."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError(
             "GEMINI_API_KEY not set. Get one free at https://aistudio.google.com/apikey\n"
             "Then run: export GEMINI_API_KEY='your-key-here'"
         )
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-flash")
+    return genai.Client(api_key=api_key)
 
 
-def extract_claims(model, content: dict) -> list[dict]:
+def generate(client, prompt: str) -> str:
+    """Try multiple models with retries to handle 503s and deprecations."""
+    for model in MODELS:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(model=model, contents=prompt)
+                return response.text.strip()
+            except Exception as e:
+                err = str(e)
+                if "503" in err or "UNAVAILABLE" in err:
+                    time.sleep(2 ** attempt)
+                    continue
+                if "404" in err or "NOT_FOUND" in err:
+                    break
+                raise
+    raise RuntimeError("All Gemini models unavailable. Try again in a few minutes.")
+
+
+def extract_claims(client, content: dict) -> list[dict]:
     """Extract hype claims from fetched content."""
 
     # Build context string based on source type
@@ -82,8 +102,7 @@ If this doesn't appear to be an AI tool, return:
   "not_ai_tool": true
 }}"""
 
-    response = model.generate_content(prompt)
-    text = response.text.strip()
+    text = generate(client, prompt)
 
     # Clean markdown code fences if present
     if text.startswith("```"):
@@ -100,7 +119,7 @@ If this doesn't appear to be an AI tool, return:
         return {"tool_name": "Parse Error", "tool_summary": "Could not parse LLM response", "claims": [], "raw": text}
 
 
-def verify_claims(model, claims_data: dict, content: dict) -> dict:
+def verify_claims(client, claims_data: dict, content: dict) -> dict:
     """Verify each claim and score tryability."""
 
     claims_json = json.dumps(claims_data, indent=2)
@@ -173,8 +192,7 @@ Return ONLY valid JSON:
   "summary": "2-3 sentence overall assessment"
 }}"""
 
-    response = model.generate_content(prompt)
-    text = response.text.strip()
+    text = generate(client, prompt)
 
     # Clean markdown code fences
     if text.startswith("```"):
@@ -193,10 +211,10 @@ Return ONLY valid JSON:
 
 def analyze(content: dict) -> dict:
     """Full analysis pipeline: extract claims → verify → verdict."""
-    model = get_model()
+    client = get_client()
 
     # Step 1: Extract claims
-    claims_data = extract_claims(model, content)
+    claims_data = extract_claims(client, content)
 
     if claims_data.get("not_ai_tool"):
         return {
@@ -215,7 +233,7 @@ def analyze(content: dict) -> dict:
         }
 
     # Step 2: Verify claims and get verdict
-    result = verify_claims(model, claims_data, content)
+    result = verify_claims(client, claims_data, content)
     result["claims_data"] = claims_data
 
     return result

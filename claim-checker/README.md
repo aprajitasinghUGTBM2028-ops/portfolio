@@ -13,7 +13,7 @@ AI content pages like [@aistuff.muu](https://instagram.com/aistuff.muu) discover
 - Is there a free tier, or is "free" just the landing page?
 - What's the content angle — the real story vs. the marketing story?
 
-Doing this manually takes 30-60 minutes per tool. This CLI does it in under a minute.
+Doing this manually takes 30-60 minutes per tool. This tool does it in under a minute — via CLI or a web interface.
 
 ## How It Works
 
@@ -40,9 +40,9 @@ Input (URL) → Fetch content → Extract claims → Verify each claim → Score
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/claim-checker.git
-cd claim-checker
-pip install -r requirements.txt
+git clone https://github.com/aprajitasinghUGTBM2028-ops/portfolio.git
+cd portfolio
+pip install -r claim-checker/requirements.txt
 ```
 
 ### API Key
@@ -55,7 +55,15 @@ export GEMINI_API_KEY='your-key-here'
 
 ## Usage
 
-### Check a GitHub repo
+### Web Interface (Streamlit)
+
+```bash
+streamlit run app.py
+```
+
+Open http://localhost:8501 in your browser, enter your Gemini API key in the sidebar, paste a URL, and click "Check it."
+
+### CLI — Check a GitHub repo
 ```bash
 python main.py https://github.com/assafelovic/gpt-researcher
 ```
@@ -142,6 +150,7 @@ python main.py https://github.com/owner/repo --json
 
 ```
 claim-checker/
+├── app.py           # Streamlit web interface
 ├── main.py          # CLI interface and pretty output
 ├── fetcher.py       # URL fetching and content extraction
 ├── analyzer.py      # Gemini-powered claim extraction and verification

@@ -12,7 +12,7 @@ The tool follows a three-stage pipeline:
 
 1. **Fetch** — Given a URL (GitHub repo, landing page, or Instagram reel), extract the raw text content. GitHub repos use the API with a raw-file fallback for rate limits. Web pages are parsed with BeautifulSoup, stripping navigation and scripts. Instagram requires manual caption input since their pages need authentication.
 
-2. **Analyze** — Send the extracted content to Google Gemini (1.5 Flash) in two LLM calls:
+2. **Analyze** — Send the extracted content to Google Gemini Flash in two LLM calls:
    - **Claim extraction**: Identify 3-7 specific claims categorized as capability, performance, ease-of-use, scope, or cost claims
    - **Verification + scoring**: For each claim, assess if it's confirmed, partially true, or exaggerated. Then score tryability (free tier, setup time, blockers) and generate a content verdict
 
@@ -20,16 +20,17 @@ The tool follows a three-stage pipeline:
 
 Key design decisions:
 - **Two LLM calls instead of one**: Splitting extraction and verification produces more structured, reliable output than asking for everything at once.
-- **CLI over web UI**: Faster to build, easier to demo, and the target user (a research intern) is comfortable with terminals.
+- **Streamlit web UI + CLI**: Both interfaces share the same backend pipeline. The web UI makes it accessible to non-technical users; the CLI is faster for power users.
 - **Gemini Flash over Pro**: The free tier is generous, latency is lower, and the task doesn't need Pro-level reasoning.
+- **Model fallback chain**: The analyzer tries multiple Gemini Flash models in sequence, handling deprecations and 503 overload errors gracefully.
 - **Three verdicts, not a binary**: "Cover the Gap" captures the most interesting content angle — when a tool is overhyped, *the hype itself* becomes the story.
 
 ## Technical Implementation
 
 - **Language**: Python 3.9+
-- **LLM**: Google Gemini 1.5 Flash via `google-generativeai` SDK
+- **LLM**: Google Gemini Flash via `google-genai` SDK (new official SDK)
 - **Web fetching**: `requests` + `BeautifulSoup4`
-- **No framework**: Vanilla Python, no Flask/Streamlit/Django — the assignment values working core over UI polish
+- **Frontend**: Streamlit for the web interface
 
 The fetcher module handles three input types (GitHub, web pages, Instagram) with graceful degradation — if the GitHub API is rate-limited, it falls back to raw.githubusercontent.com, then to scraping the page HTML. The analyzer module manages prompt engineering, JSON parsing (including stripping markdown code fences that Gemini sometimes wraps responses in), and error states (not an AI tool, no claims found).
 
