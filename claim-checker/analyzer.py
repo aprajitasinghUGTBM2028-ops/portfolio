@@ -190,7 +190,8 @@ def verify_claims(client, claims_data: dict, content: dict) -> dict:
 
 IMPORTANT RULES:
 - NEVER say "confirmed" just because the website claims something. That's circular. Only confirm if you have INDEPENDENT evidence (your own knowledge, the tool's actual architecture, user reviews, GitHub activity, etc.)
-- If you don't know whether a claim is true, say "unverified" — don't guess.
+- Before marking anything "unverified", ACTUALLY LOOK for evidence: think about Reddit threads, YouTube reviews, Twitter/X posts, Product Hunt launches, app store reviews, GitHub issues, blog reviews — real people talking about this tool. If nobody is talking about it, THAT ITSELF is evidence (a tool with no public discussion is a red flag). Say "no public reviews or social media discussion found" — don't just say "unverified without user feedback" and give up.
+- If the tool is too new or obscure for public feedback, evaluate based on: the team behind it, similar tools that work the same way, whether the technical approach is sound, and red flags in the marketing.
 - Be specific. "This tool is interesting" is banned. "This generates 30-second videos from a single text prompt, similar to Runway but focused on product demos" is good.
 - Think about what a non-technical person would experience trying this for the first time.
 
@@ -203,8 +204,13 @@ SOURCE CONTENT (for reference):
 
 SECTION 1 — CLAIM VERIFICATION
 For each claim:
-- verdict: "confirmed" (you have independent evidence), "partially_true" (has a catch), "exaggerated" (misleading), or "unverified" (can't confirm either way)
-- evidence: What SPECIFIC evidence do you have? Not "the website says so" — that's just repeating the claim. What do you actually KNOW about this tool or similar tools?
+- verdict: "confirmed" (you have independent evidence), "partially_true" (has a catch), "exaggerated" (misleading), or "unverified" (searched but found no independent evidence)
+- evidence: What SPECIFIC evidence do you have? Check these sources mentally:
+  * Do you know this tool from your training data? Have people discussed it on Reddit, Twitter/X, Hacker News, Product Hunt?
+  * Are there YouTube reviews, blog posts, or app store reviews?
+  * Does the GitHub repo have real activity (stars, issues, contributors) or is it dead/empty?
+  * Does the underlying technology (the API/model it uses) actually support what's claimed?
+  * If zero public discussion exists, say that — it's a signal.
 - red_flags: Concrete issues, not vague warnings
 
 SECTION 2 — TRYABILITY (think like a non-coder friend asking "how do I try this?")
