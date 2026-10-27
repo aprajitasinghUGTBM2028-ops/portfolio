@@ -125,9 +125,10 @@ with st.sidebar:
     st.markdown(
         "1. Paste a URL (GitHub repo, landing page, or Instagram reel)\n"
         "2. The tool fetches the page + sub-pages\n"
-        "3. GPT searches the web and verifies claims\n"
-        "4. You get an evidence-backed verdict"
+        "3. A 9-step AI pipeline classifies, searches, validates, and critiques\n"
+        "4. You get an evidence-backed verdict with fact IDs"
     )
+    st.caption("**Cost:** ~5-7 API calls per check (~$0.05-0.15). Uses GPT-4o with web search.")
 
 # ── Input ────────────────────────────────────────────────────────────
 
@@ -216,10 +217,15 @@ if check_btn and url:
             st.write("Searching Reddit, HN, Product Hunt for independent verification...")
             st.write("Running full analysis...")
         else:
-            st.write("Step 1/4: Extracting claims from page + sub-pages...")
-            st.write("Step 2/4: Web searching Reddit, HN, Product Hunt for evidence...")
-            st.write("Step 3/4: Verifying claims against evidence...")
-            st.write("Step 4/4: Writing hooks from evidence...")
+            st.write("Step 1/9: Classifying tool & planning research...")
+            st.write("Step 2/9: Building source index...")
+            st.write("Step 3/9: Searching for independent evidence...")
+            st.write("Step 4/9: Extracting structured facts...")
+            st.write("Step 5/9: Validating facts against sources...")
+            st.write("Step 6/9: Filling evidence gaps...")
+            st.write("Step 7/9: Writing report from validated facts...")
+            st.write("Step 8/9: Critic checking report against evidence...")
+            st.write("Step 9/9: Writing hooks from evidence...")
         try:
             result = analyze(content)
         except RuntimeError as e:
@@ -231,6 +237,14 @@ if check_btn and url:
             st.error(f"API error: {e}")
             st.stop()
         status.update(label="Analysis complete", state="complete")
+
+    # ── Parse/quality warnings ──────────────────────────────────────
+    if result.get("_search_parse_failed"):
+        st.warning("Some search results could not be parsed. Evidence may be incomplete.")
+    if result.get("_gap_parse_failed"):
+        st.warning("Gap-filling search results could not be parsed.")
+    if result.get("_no_independent_sources"):
+        st.warning("No independent (non-official) sources found. All evidence comes from the tool's own site.")
 
     # ── Error states ─────────────────────────────────────────────────
 
@@ -417,7 +431,7 @@ if check_btn and url:
         if searches:
             with st.expander("Searches run", expanded=False):
                 for s in searches:
-                    found = s.get("found", False)
+                    found = s.get("found_results", s.get("found", False))
                     icon = "✅" if found else "❌"
                     st.caption(f"{icon} {s.get('query', '?')}")
 
