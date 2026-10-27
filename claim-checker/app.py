@@ -51,17 +51,29 @@ st.markdown("""
 
 # ── API Key ──────────────────────────────────────────────────────────
 
+def get_api_key():
+    """Check for API key in Streamlit secrets, then env, then sidebar input."""
+    try:
+        return st.secrets["GEMINI_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        return os.environ.get("GEMINI_API_KEY", "")
+
+stored_key = get_api_key()
+
 with st.sidebar:
     st.header("Settings")
-    api_key = st.text_input(
-        "Gemini API Key",
-        type="password",
-        help="Get a free key at https://aistudio.google.com/apikey",
-        value=os.environ.get("GEMINI_API_KEY", ""),
-    )
-    st.markdown(
-        "[Get a free API key →](https://aistudio.google.com/apikey)",
-    )
+    if stored_key:
+        api_key = stored_key
+        st.success("API key configured")
+    else:
+        api_key = st.text_input(
+            "Gemini API Key",
+            type="password",
+            help="Get a free key at https://aistudio.google.com/apikey",
+        )
+        st.markdown(
+            "[Get a free API key →](https://aistudio.google.com/apikey)",
+        )
     st.divider()
     st.markdown("**How it works**")
     st.markdown(
