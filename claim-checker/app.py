@@ -77,11 +77,34 @@ def get_api_key():
 
 stored_key = get_api_key()
 
+# Password gate
+def get_app_password():
+    """Get app password from secrets or env."""
+    try:
+        if "APP_PASSWORD" in st.secrets:
+            return str(st.secrets["APP_PASSWORD"]).strip()
+    except (KeyError, FileNotFoundError):
+        pass
+    return os.environ.get("APP_PASSWORD", "")
+
+app_password = get_app_password()
+
 with st.sidebar:
     st.header("Settings")
+
+    # Password protection
+    if app_password:
+        entered_pw = st.text_input("App Password", type="password", help="Enter the password to use this tool")
+        if not entered_pw:
+            st.warning("Enter the app password to continue.")
+            st.stop()
+        if entered_pw != app_password:
+            st.error("Wrong password.")
+            st.stop()
+
     if stored_key:
         api_key = stored_key
-        st.success(f"API key configured ({len(api_key)} chars, starts: {api_key[:8]}...)")
+        st.success("API key configured")
     else:
         api_key = st.text_input(
             "OpenAI API Key",
@@ -91,13 +114,20 @@ with st.sidebar:
         st.markdown(
             "[Get an API key →](https://platform.openai.com/api-keys)",
         )
+
+    # Usage counter
+    if "usage_count" not in st.session_state:
+        st.session_state.usage_count = 0
+    daily_cap = 20
+    st.caption(f"Checks today: {st.session_state.usage_count}/{daily_cap}")
+
     st.divider()
     st.markdown("**How it works**")
     st.markdown(
         "1. Paste a URL (GitHub repo, landing page, or Instagram reel)\n"
-        "2. The tool fetches the content\n"
-        "3. GPT extracts and verifies claims\n"
-        "4. You get a verdict with a content angle"
+        "2. The tool fetches the page + sub-pages\n"
+        "3. GPT searches the web and verifies claims\n"
+        "4. You get an evidence-backed verdict"
     )
 
 # ── Input ────────────────────────────────────────────────────────────
@@ -128,7 +158,12 @@ if check_btn and url:
         st.error("Please enter your OpenAI API key in the sidebar.")
         st.stop()
 
+    if st.session_state.usage_count >= daily_cap:
+        st.error(f"Daily limit reached ({daily_cap} checks). Come back tomorrow or adjust the cap in secrets.")
+        st.stop()
+
     os.environ["OPENAI_API_KEY"] = api_key
+    st.session_state.usage_count += 1
 
     with st.status("Analyzing...", expanded=True) as status:
         # Step 1: Fetch
@@ -481,15 +516,17 @@ if check_btn and url:
         else:
             css = "verdict-skip"
 
-        hype_bar = "🔥" * int(hype_score) if isinstance(hype_score, (int, float)) else "?"
-
         st.markdown(f"""
 <div class="{css}">
     <h3>{verdict}</h3>
-    <p><strong>Hype Score:</strong> {hype_bar} ({hype_score}/10)</p>
     <p>{cv.get('reason', '')}</p>
 </div>
 """, unsafe_allow_html=True)
+
+        if isinstance(hype_score, (int, float)):
+            st.progress(min(int(hype_score), 10) / 10, text=f"Hype Score: {int(hype_score)}/10")
+        else:
+            st.markdown(f"**Hype Score:** {hype_score}/10")
 
         hooks = cv.get("hooks", [])
         if hooks:
