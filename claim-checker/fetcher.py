@@ -147,7 +147,7 @@ def fetch_webpage(url: str) -> dict:
         text = soup.get_text(separator="\n", strip=True)
         # Collapse whitespace
         text = re.sub(r'\n{3,}', '\n\n', text)
-        text = text[:8000]  # cap for LLM context
+        text = text[:12000]  # cap for LLM context
 
         # Check for pricing signals
         pricing_keywords = ["pricing", "free tier", "free plan", "pro plan",

@@ -113,29 +113,48 @@ Page content:
     else:
         context = str(content)
 
-    prompt = f"""You are a skeptical AI tool reviewer who has tested hundreds of tools. You don't take marketing at face value. You dig into what's ACTUALLY happening.
+    prompt = f"""You are a meticulous AI tool investigator. Your job is to READ THE SOURCE CONTENT CAREFULLY and extract ONLY what's actually there. You NEVER make assumptions or fill in gaps with guesses.
 
 SOURCE CONTENT:
 {context}
 
-TASK:
-1. Identify what this tool ACTUALLY is — not what it says it is. Be specific: "a wrapper around GPT-4 that generates blog posts" is better than "an AI writing assistant."
-2. Extract 3-7 specific claims. For EACH claim, think: "What would I need to see to believe this?" Focus on:
-   - Capability claims ("can generate X", "automates Y") — but what does it ACTUALLY do under the hood?
-   - Performance claims ("10x faster", "saves hours") — compared to what? Says who?
-   - Ease-of-use claims ("no code needed", "one click") — is there hidden complexity?
-   - Scope claims ("works with any...", "universal") — what are the actual limits?
-   - Cost claims ("free", "open source") — what's the catch? API costs? Usage limits?
+TASK — Read the source content above word by word before answering:
 
-Return ONLY valid JSON in this exact format:
+1. IDENTIFY THE TOOL TYPE from the source content. What does this tool ACTUALLY do? Choose the most accurate category:
+   - Generator (creates new content from scratch)
+   - Gallery/Directory (curates or showcases existing content)
+   - Wrapper (puts a UI around another AI like GPT/Claude/Stable Diffusion)
+   - Marketplace (sells templates, prompts, or assets)
+   - Editor (modifies existing content)
+   - Analyzer (examines or scores content)
+   - Aggregator (collects data from multiple sources)
+   - Other (explain what it is)
+   BASE THIS ON WHAT THE SOURCE CONTENT DESCRIBES, not what the name sounds like.
+
+2. FIND SPECIFIC NUMBERS AND DATA in the source content. Look for:
+   - User counts, entries, items in the database
+   - Statistics, research findings, studies mentioned
+   - Pricing numbers, free tier details
+   - Performance metrics, time savings
+   - Any interesting data points that would make someone stop scrolling
+   Quote these EXACTLY as they appear.
+
+3. Extract 3-7 specific claims. For EACH claim:
+   - Include the EXACT quote from the source where this claim appears
+   - If there is no quote (you're inferring it), mark it as "implied"
+   - Focus on what the source ACTUALLY SAYS, not what you think tools like this usually do
+
+Return ONLY valid JSON:
 {{
   "tool_name": "Name of the tool",
-  "tool_summary": "One brutally honest line about what this actually is (e.g. 'A Streamlit app that calls Claude API to rewrite text — marketed as an AI writing revolution')",
+  "tool_type": "generator|gallery|wrapper|marketplace|editor|analyzer|aggregator|other",
+  "tool_summary": "One honest line based ONLY on what the source content shows (e.g. 'A curated gallery of 233 AI-generated motion design videos with prompt details — not a generator')",
+  "key_data_points": ["specific numbers/stats found in the source content"],
   "claims": [
     {{
       "claim": "The specific claim in plain language",
       "category": "capability|performance|ease_of_use|scope|cost",
-      "quote": "The exact or near-exact text from the source that makes this claim (if available)"
+      "quote": "The EXACT text from the source, or 'implied — no direct quote found'"
     }}
   ]
 }}
@@ -180,71 +199,98 @@ def verify_claims(client, claims_data: dict, content: dict) -> dict:
 
     source_text = ""
     if content.get("source_type") == "github":
-        source_text = content.get("readme", "")[:4000]
+        source_text = content.get("readme", "")[:6000]
     elif content.get("source_type") == "web":
-        source_text = content.get("text", "")[:4000]
+        source_text = content.get("text", "")[:6000]
     elif content.get("source_type") == "instagram":
-        source_text = content.get("caption", content.get("text", ""))[:2000]
+        source_text = content.get("caption", content.get("text", ""))[:3000]
 
-    prompt = f"""You are a brutally honest AI tool reviewer who has personally tested hundreds of tools. You don't just read marketing pages — you think about what ACTUALLY happens when someone tries this tool. You write for content creators who need to decide in 30 seconds: is this worth my time?
+    tool_type = claims_data.get("tool_type", "unknown")
+    key_data = json.dumps(claims_data.get("key_data_points", []))
 
-IMPORTANT RULES:
-- NEVER say "confirmed" just because the website claims something. That's circular. Only confirm if you have INDEPENDENT evidence (your own knowledge, the tool's actual architecture, user reviews, GitHub activity, etc.)
-- Before marking anything "unverified", ACTUALLY LOOK for evidence: think about Reddit threads, YouTube reviews, Twitter/X posts, Product Hunt launches, app store reviews, GitHub issues, blog reviews — real people talking about this tool. If nobody is talking about it, THAT ITSELF is evidence (a tool with no public discussion is a red flag). Say "no public reviews or social media discussion found" — don't just say "unverified without user feedback" and give up.
-- If the tool is too new or obscure for public feedback, evaluate based on: the team behind it, similar tools that work the same way, whether the technical approach is sound, and red flags in the marketing.
-- Be specific. "This tool is interesting" is banned. "This generates 30-second videos from a single text prompt, similar to Runway but focused on product demos" is good.
-- Think about what a non-technical person would experience trying this for the first time.
+    prompt = f"""You are a meticulous AI tool investigator writing for content creators. Your analysis must be TRACEABLE — every claim you make must point back to either the SOURCE CONTENT below or to specific external evidence you cite.
+
+=== ABSOLUTE RULES (violating any of these makes your output useless) ===
+
+RULE 1 — SOURCE CONTENT IS YOUR PRIMARY EVIDENCE.
+Read the SOURCE CONTENT below line by line. If the source says "It's free" → free_tier is "yes". If the source shows 233 entries → mention 233 entries. If the source describes a gallery → it's a gallery, not a generator. DO NOT OVERRIDE what the source content says with your assumptions.
+
+RULE 2 — NEVER INVENT FEATURES OR STEPS.
+If the source content does not mention a signup process, DO NOT describe one. If the source doesn't mention email verification, DO NOT include it. If you didn't read about a specific feature in the source, DO NOT claim it exists. When unsure, say "not mentioned on the page" rather than guessing.
+
+RULE 3 — NEVER CONFIRM BY CIRCULAR REASONING.
+"Confirmed because the website says so" is NOT evidence — that's just reading the marketing back to them. Evidence means: your knowledge of the tool, Reddit/Twitter/HN/Product Hunt discussions, YouTube reviews, app store reviews, GitHub activity, blog posts, or the technical architecture proving the claim must be true.
+
+RULE 4 — FIND THE INTERESTING DATA.
+The source content contains specific numbers, statistics, or data points. These are GOLD for content creators. Find them and use them in your hooks and analysis. Numbers like "33 people typed the same prompt — likes ranged from 0 to 17,023" are 10x more valuable than "this tool has interesting features."
+
+RULE 5 — IDENTIFY WHAT THE TOOL ACTUALLY IS.
+The extraction identified this as: {tool_type}
+Verify this against the source content. A gallery is NOT a generator. A wrapper is NOT a new AI. A curated collection is NOT a tool that creates things. Get this right — everything else depends on it.
+
+RULE 6 — CHECK FOR LOOKALIKES.
+Does this tool's name sound similar to a well-known tool? (e.g., "PromptMotion" vs "Prompt Motion" vs "Motion" the design tool). If yes, warn about confusion and clarify what THIS tool specifically is vs the lookalike.
+
+=== INPUTS ===
 
 EXTRACTED CLAIMS:
 {claims_json}
 
-SOURCE CONTENT (for reference):
+KEY DATA POINTS FROM SOURCE:
+{key_data}
+
+SOURCE CONTENT (READ THIS CAREFULLY — this is your primary evidence):
 {source_text}
 {pricing_info}
 
+=== SECTIONS ===
+
 SECTION 1 — CLAIM VERIFICATION
-For each claim:
-- verdict: "confirmed" (you have independent evidence), "partially_true" (has a catch), "exaggerated" (misleading), or "unverified" (searched but found no independent evidence)
-- evidence: What SPECIFIC evidence do you have? Check these sources mentally:
-  * Do you know this tool from your training data? Have people discussed it on Reddit, Twitter/X, Hacker News, Product Hunt?
-  * Are there YouTube reviews, blog posts, or app store reviews?
-  * Does the GitHub repo have real activity (stars, issues, contributors) or is it dead/empty?
-  * Does the underlying technology (the API/model it uses) actually support what's claimed?
-  * If zero public discussion exists, say that — it's a signal.
-- red_flags: Concrete issues, not vague warnings
+For each claim, provide:
+- verdict: "confirmed" / "partially_true" / "exaggerated" / "unverified"
+- evidence: CITE YOUR SOURCE. Examples of good evidence:
+  * "The source page explicitly states: '[exact quote]'"
+  * "Known tool — discussed on Reddit r/singularity with 200+ upvotes (from my training data)"
+  * "The underlying tech (Stable Diffusion) does support this capability"
+  * "No public discussion found on Reddit, Twitter, Product Hunt, or YouTube — this is a red flag for a tool claiming 140K weekly visits"
+  BAD evidence (BANNED): "Confirmed because the website claims it" / "Verified based on the tool's description"
+- red_flags: Specific, concrete issues only. Not "may have limitations" but "claims 140K visits/week but has zero Reddit/Twitter discussion — suspicious"
 
-SECTION 2 — TRYABILITY (think like a non-coder friend asking "how do I try this?")
-- free_tier: yes/no/freemium (free but limited)/unclear — and if freemium, what do you get for free?
-- setup_time_minutes: Your honest estimate in minutes. Think through: do they need to sign up? Verify email? Enter payment? Install anything? Wait for access?
-- visible_result: yes/no/unclear — can they get something cool to screenshot/screen-record within the first try?
-- blockers: Be specific — not "requires signup" but "requires Google account signup + email verification, takes ~2 min"
+SECTION 2 — TRYABILITY
+Base this ONLY on what the source content shows:
+- free_tier: If the source says "free" or "no cost", say "yes". If the source mentions pricing tiers, say "freemium" and explain. ONLY say "unclear" if the source genuinely doesn't mention pricing at all.
+- free_tier_detail: Quote or paraphrase what the source says about pricing. If source says "It's free" → write "Site explicitly states it's free"
+- setup_time_minutes: Estimate based ONLY on steps you can verify from the source. A simple website you just visit = 1 min. Don't add "email verification" unless the source mentions it.
+- visible_result: Can they see/use something immediately? Base on source content.
+- blockers: ONLY list blockers mentioned or clearly implied by the source content
+- score: 1-5 based on the above. A free website with no signup = 4-5. A tool requiring API keys and coding = 1-2.
 
-SECTION 3 — SETUP GUIDE (write this for someone who has never used a terminal)
-Write 3-6 numbered steps. Use plain English. Example:
-  "1. Go to toolname.com and click Sign Up"
-  "2. Sign in with your Google account (no credit card needed)"
-  "3. Click 'New Project' and paste any text"
-  "4. Hit Generate — you'll see your result in about 10 seconds"
-If the tool requires coding or API keys, say that clearly in step 1 so they know upfront.
+SECTION 3 — SETUP GUIDE
+Write 3-6 steps based ONLY on what the source content describes.
+- If it's a website you just visit: "1. Go to [url]  2. Browse [what's there]  3. [how to use it]"
+- If the source doesn't describe a signup process: DO NOT INVENT ONE
+- If it requires coding: say that in step 1
+- If you genuinely don't know the steps because the source doesn't describe them: say "Steps unclear from available information — visit the site to explore"
 
-SECTION 4 — VIRALITY ASSESSMENT (think like a content strategist)
-- visual_wow: 1-10 — Does this produce something that makes people stop scrolling? A text-based tool scores 2. A tool that generates stunning videos scores 9.
-- shareability: 1-10 — Would someone screenshot/screen-record their result and share it? Can viewers immediately understand what they're seeing?
-- trend_fit: 1-10 — Does this fit current social media trends (AI demos, before/after, "I replaced X with AI", tool reveals, etc.)?
-- uniqueness: 1-10 — Is this the first tool doing this, or the 50th ChatGPT wrapper? Has this been covered to death already?
-- virality_score: average of the above four, rounded
-- virality_explanation: One sentence explaining the score honestly
+SECTION 4 — VIRALITY ASSESSMENT
+- visual_wow: 1-10 — Base on what the tool actually produces (from source content)
+- shareability: 1-10 — Would the OUTPUT make someone screenshot/share?
+- trend_fit: 1-10 — Current AI content trends
+- uniqueness: 1-10 — Is this a new angle or done to death?
+- virality_score: average of above, rounded
+- virality_explanation: One sentence using SPECIFIC details from the source
 
 SECTION 5 — HONEST COMPARISON
-- similar_to: "Think of it as [well-known tool/concept] but [key difference]" — e.g. "Canva but for video ads" or "ChatGPT with a nicer UI, nothing new under the hood"
-- what_makes_it_different: One sentence — what genuinely sets this apart? If nothing, say "Nothing — this is a wrapper/clone of [X]"
-- who_is_this_for: One sentence — "Perfect for [specific person] who needs [specific thing]"
+- similar_to: Compare to the RIGHT tool. If it's a gallery, compare to galleries (Pinterest, Dribbble). If it's a generator, compare to generators (Runway, Pika). Don't compare a gallery to a generator.
+- what_makes_it_different: Based on source content — what specific feature/angle is unique?
+- who_is_this_for: Specific person + specific need
+- lookalike_warning: If the name could be confused with another tool, explain the difference. Otherwise null.
 
 SECTION 6 — CONTENT VERDICT
 - verdict: "COVER IT" / "COVER THE GAP" / "SKIP"
-- reason: 2-3 sentences. Be opinionated. Would YOU make a reel about this?
-- hook: Write the actual first line of a reel script. Not a generic "explore the capabilities" — write something like "This AI tool just made Canva obsolete. Here's what happened when I tested it." or "Everyone's hyping this tool but nobody's showing you THIS..."
-- reel_format: Suggest the best format — "screen recording with voiceover", "before/after split", "reaction video", "tutorial walkthrough", "myth-busting", etc.
+- reason: 2-3 sentences referencing SPECIFIC things from the source
+- hook: Write a reel hook using ACTUAL DATA from the source. Use specific numbers, quotes, or findings. Example: "33 people typed the EXACT same AI prompt. One got 0 likes. Another got 17,023. Here's what was different." GENERIC HOOKS ARE BANNED.
+- reel_format: Best format for this specific tool
 
 Return ONLY valid JSON:
 {{
@@ -253,16 +299,16 @@ Return ONLY valid JSON:
     {{
       "claim": "the claim text",
       "verdict": "confirmed|partially_true|exaggerated|unverified",
-      "evidence": "specific evidence, not just repeating the claim",
+      "evidence": "specific evidence WITH SOURCE CITATION",
       "red_flags": ["specific flag"]
     }}
   ],
   "tryability": {{
     "free_tier": "yes|no|freemium|unclear",
-    "free_tier_detail": "what you get for free, if anything",
+    "free_tier_detail": "what the source says about pricing",
     "setup_time_minutes": 5,
     "visible_result": "yes|no|unclear",
-    "blockers": ["specific blocker with detail"],
+    "blockers": ["only blockers found in source content"],
     "score": 1-5
   }},
   "setup_guide": [
@@ -276,21 +322,22 @@ Return ONLY valid JSON:
     "trend_fit": 1-10,
     "uniqueness": 1-10,
     "virality_score": 1-10,
-    "virality_explanation": "one honest sentence"
+    "virality_explanation": "one sentence with specific details from the source"
   }},
   "comparison": {{
-    "similar_to": "It's like X but Y",
-    "what_makes_it_different": "one sentence",
-    "who_is_this_for": "one sentence"
+    "similar_to": "Compare to the RIGHT category of tool",
+    "what_makes_it_different": "one sentence based on source content",
+    "who_is_this_for": "specific person + specific need",
+    "lookalike_warning": "warning if name is confusable, or null"
   }},
   "content_verdict": {{
     "verdict": "COVER IT|COVER THE GAP|SKIP",
-    "reason": "2-3 opinionated sentences",
-    "hook": "The actual first line of a reel script",
+    "reason": "2-3 sentences referencing specific source data",
+    "hook": "A reel hook using ACTUAL DATA/NUMBERS from the source",
     "reel_format": "suggested format"
   }},
   "hype_score": 1-10,
-  "summary": "2-3 sentence brutally honest assessment"
+  "summary": "2-3 sentences referencing specific findings from the source content"
 }}"""
 
     text = generate(client, prompt, prefer_model="gpt-4o")

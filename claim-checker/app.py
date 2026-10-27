@@ -200,6 +200,8 @@ if check_btn and url:
 
     # Honest comparison (right up top so they get the context)
     comp = result.get("comparison", {})
+    if comp.get("lookalike_warning"):
+        st.warning(f"**Name alert:** {comp['lookalike_warning']}")
     if comp.get("similar_to"):
         st.markdown(f"> {comp['similar_to']}")
     if comp.get("who_is_this_for"):
