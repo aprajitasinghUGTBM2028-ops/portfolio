@@ -2,6 +2,8 @@
 
 **Paste an AI tool's URL. Get a verdict: what's real, what's hype, and whether it's worth covering.**
 
+**[Try it live](https://ideahypeanalyser.streamlit.app)** — just bring a free Gemini API key.
+
 Built for content researchers who evaluate dozens of AI tools weekly and need to quickly separate genuine capabilities from marketing fluff.
 
 ## The Problem
@@ -57,11 +59,15 @@ export GEMINI_API_KEY='your-key-here'
 
 ### Web Interface (Streamlit)
 
+**Live app:** [ideahypeanalyser.streamlit.app](https://ideahypeanalyser.streamlit.app)
+
+Or run locally:
+
 ```bash
 streamlit run app.py
 ```
 
-Open http://localhost:8501 in your browser, enter your Gemini API key in the sidebar, paste a URL, and click "Check it."
+Enter your Gemini API key in the sidebar, paste a URL, and click "Check it."
 
 ### CLI — Check a GitHub repo
 ```bash
