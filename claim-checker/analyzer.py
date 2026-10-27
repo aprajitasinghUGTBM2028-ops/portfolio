@@ -22,26 +22,18 @@ def get_client():
     return OpenAI(api_key=api_key)
 
 
-def generate(client, prompt: str, use_search: bool = False) -> str:
+def generate(client, prompt: str, **kwargs) -> str:
     """Try multiple models with retries."""
     last_error = None
     for model in MODELS:
         for attempt in range(3):
             try:
-                if use_search:
-                    response = client.responses.create(
-                        model=model,
-                        tools=[{"type": "web_search_preview"}],
-                        input=prompt,
-                    )
-                    return response.output_text.strip()
-                else:
-                    response = client.chat.completions.create(
-                        model=model,
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.3,
-                    )
-                    return response.choices[0].message.content.strip()
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                )
+                return response.choices[0].message.content.strip()
             except Exception as e:
                 last_error = e
                 err = str(e)
