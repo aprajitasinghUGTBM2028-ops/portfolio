@@ -47,17 +47,15 @@ st.title("AI Hype Claim Checker")
 st.caption("Paste an AI tool link. The checker verifies claims against what it can actually read and find.")
 
 pw = st.secrets.get("APP_PASSWORD", "")
-if not pw:
-    st.error("App not configured (password missing).")
-    st.stop()
-if not st.session_state.get("authed"):
-    entered = st.text_input("Password", type="password")
-    if entered and entered == pw:
-        st.session_state["authed"] = True
-        st.rerun()
-    elif entered:
-        st.warning("Wrong password.")
-    st.stop()
+if pw:
+    if not st.session_state.get("authed"):
+        entered = st.text_input("Password", type="password")
+        if entered and entered == pw:
+            st.session_state["authed"] = True
+            st.rerun()
+        elif entered:
+            st.warning("Wrong password.")
+        st.stop()
 
 url = st.text_input("Tool URL", placeholder="https://example.com or github.com/org/repo")
 col_cap, col_screen = st.columns(2)
