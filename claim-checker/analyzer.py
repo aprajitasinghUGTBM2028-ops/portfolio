@@ -21,6 +21,10 @@ MODEL_CHAIN = ("gpt-4o", "gpt-4o-mini")
 
 # ── LLM wrapper (the only place that talks to OpenAI) ────────────────
 
+def _utf8(text: str) -> str:
+    return text.encode("utf-8", errors="replace").decode("utf-8").replace("\x00", "")
+
+
 class OpenAILLM:
     def __init__(self, api_key: str, models=MODEL_CHAIN):
         from openai import OpenAI
@@ -29,6 +33,7 @@ class OpenAILLM:
         self.used = set()
 
     def json(self, system: str, user: str, temperature: float = 0.2) -> dict:
+        system, user = _utf8(system), _utf8(user)
         last = None
         for m in self.models:
             try:
@@ -45,6 +50,7 @@ class OpenAILLM:
 
     def search(self, prompt: str) -> dict:
         """Web search through the Responses API. Returns {'text', 'sources':[{'url','title'}]}."""
+        prompt = _utf8(prompt)
         try:
             r = self.client.responses.create(
                 model=self.models[0], input=prompt,

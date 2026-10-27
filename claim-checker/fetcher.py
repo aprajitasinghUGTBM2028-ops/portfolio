@@ -77,6 +77,7 @@ def _get(url: str, headers=None, hops: int = 4) -> requests.Response:
             if len(body) > MAX_BYTES:
                 break
         r._content = body
+        r.encoding = r.apparent_encoding or "utf-8"
         r.url = url
         return r
     raise FetchError("Too many redirects.")
@@ -84,14 +85,18 @@ def _get(url: str, headers=None, hops: int = 4) -> requests.Response:
 
 # ── HTML → text ──────────────────────────────────────────────────────
 
+def _clean(text: str) -> str:
+    return text.encode("utf-8", errors="replace").decode("utf-8").replace("\x00", "")
+
+
 def html_to_text(html_text: str):
-    soup = BeautifulSoup(html_text, "html.parser")
+    soup = BeautifulSoup(_clean(html_text), "html.parser")
     for t in soup(["script", "style", "noscript", "svg", "nav", "footer", "form", "iframe"]):
         t.decompose()
-    title = (soup.title.string or "").strip() if soup.title and soup.title.string else ""
+    title = _clean((soup.title.string or "").strip()) if soup.title and soup.title.string else ""
     text = soup.get_text("\n", strip=True)
     lines = [ln for ln in (l.strip() for l in text.splitlines()) if ln]
-    return title, "\n".join(lines), soup
+    return title, _clean("\n".join(lines)), soup
 
 
 def _pick_subpages(soup, base_url: str):
