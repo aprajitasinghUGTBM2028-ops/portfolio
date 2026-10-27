@@ -7,6 +7,7 @@ import os
 import json
 import time
 from google import genai
+from google.genai import types
 
 MODELS = [
     "gemini-2.5-flash",
@@ -27,13 +28,20 @@ def get_client():
     return genai.Client(api_key=api_key)
 
 
-def generate(client, prompt: str) -> str:
-    """Try multiple models with retries to handle 503s and deprecations."""
+def generate(client, prompt: str, use_search: bool = False) -> str:
+    """Try multiple models with retries. use_search enables Google Search grounding."""
     last_error = None
+    config = None
+    if use_search:
+        config = types.GenerateContentConfig(
+            tools=[types.Tool(google_search=types.GoogleSearch())]
+        )
     for model in MODELS:
         for attempt in range(3):
             try:
-                response = client.models.generate_content(model=model, contents=prompt)
+                response = client.models.generate_content(
+                    model=model, contents=prompt, config=config
+                )
                 return response.text.strip()
             except Exception as e:
                 last_error = e
@@ -209,7 +217,7 @@ Return ONLY valid JSON:
   "summary": "2-3 sentence overall assessment"
 }}"""
 
-    text = generate(client, prompt)
+    text = generate(client, prompt, use_search=True)
 
     # Clean markdown code fences
     if text.startswith("```"):
