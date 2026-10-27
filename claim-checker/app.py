@@ -195,52 +195,90 @@ if check_btn and url:
     claims_data = result.get("claims_data", {})
 
     # Tool info
-    st.markdown(f"### 🔍 {claims_data.get('tool_name', 'Unknown Tool')}")
+    st.markdown(f"### {claims_data.get('tool_name', 'Unknown Tool')}")
     st.markdown(f"*{claims_data.get('tool_summary', '')}*")
 
-    # Claims
-    st.markdown("### 📋 Extracted Claims")
-    for i, claim in enumerate(claims_data.get("claims", []), 1):
-        cat = claim.get("category", "").replace("_", " ").title()
-        st.markdown(f"**{i}. [{cat}]** {claim['claim']}")
-        if claim.get("quote"):
-            st.caption(f'"{claim["quote"]}"')
+    # Honest comparison (right up top so they get the context)
+    comp = result.get("comparison", {})
+    if comp.get("similar_to"):
+        st.markdown(f"> {comp['similar_to']}")
+    if comp.get("who_is_this_for"):
+        st.caption(comp["who_is_this_for"])
 
-    # Verification
-    st.markdown("### 🔬 Claim Verification")
+    # ── Claims & Verification ───────────────────────────────────────
+    st.markdown("### Claim Check")
     for i, vc in enumerate(result.get("verified_claims", []), 1):
-        verdict = vc["verdict"]
+        verdict = vc.get("verdict", "unverified")
         if verdict == "confirmed":
-            icon, css_class = "✅", "claim-confirmed"
+            icon = "✅"
         elif verdict == "partially_true":
-            icon, css_class = "⚠️", "claim-partial"
+            icon = "⚠️"
+        elif verdict == "unverified":
+            icon = "❓"
         else:
-            icon, css_class = "❌", "claim-exaggerated"
+            icon = "❌"
 
         verdict_label = verdict.upper().replace("_", " ")
         st.markdown(f"**{i}. {vc['claim']}**")
-        st.markdown(f"<span class='{css_class}'>{icon} {verdict_label}</span> — {vc.get('evidence', '')}", unsafe_allow_html=True)
+        st.markdown(f"{icon} **{verdict_label}** — {vc.get('evidence', '')}")
         flags = vc.get("red_flags", [])
         if flags:
             st.markdown(f"🚩 *{', '.join(flags)}*")
 
-    # Tryability
-    st.markdown("### 🧪 Tryability")
+    # ── Tryability ──────────────────────────────────────────────────
+    st.markdown("### Can You Actually Try This?")
     tryability = result.get("tryability", {})
     score = tryability.get("score", "?")
-    if isinstance(score, int):
-        st.progress(score / 5, text=f"Tryability: {score}/5")
+    if isinstance(score, (int, float)):
+        st.progress(min(int(score), 5) / 5, text=f"Tryability: {int(score)}/5")
+
     col_a, col_b, col_c = st.columns(3)
-    col_a.metric("Free Tier", tryability.get("free_tier", "?"))
-    col_b.metric("Setup Time", tryability.get("setup_time", "?"))
-    col_c.metric("Visible Result", tryability.get("visible_result", "?"))
+    free_tier = tryability.get("free_tier", "?")
+    free_detail = tryability.get("free_tier_detail", "")
+    col_a.metric("Free Tier", free_tier)
+    setup_mins = tryability.get("setup_time_minutes", "?")
+    if isinstance(setup_mins, (int, float)):
+        col_b.metric("Setup Time", f"~{int(setup_mins)} min")
+    else:
+        col_b.metric("Setup Time", str(setup_mins))
+    col_c.metric("Quick Result?", tryability.get("visible_result", "?"))
+
+    if free_detail:
+        st.caption(f"Free tier: {free_detail}")
+
     blockers = tryability.get("blockers", [])
     if blockers:
-        st.warning(f"**Blockers:** {', '.join(blockers)}")
-    else:
-        st.success("No blockers!")
+        st.warning("**Blockers:** " + " / ".join(blockers))
 
-    # Content Verdict
+    # ── Setup Guide ─────────────────────────────────────────────────
+    setup_steps = result.get("setup_guide", [])
+    if setup_steps:
+        st.markdown("### How to Try It (Step by Step)")
+        for step in setup_steps:
+            st.markdown(f"{step}")
+
+    # ── Virality Assessment ─────────────────────────────────────────
+    virality = result.get("virality", {})
+    if virality:
+        st.markdown("### Will This Go Viral?")
+        v_score = virality.get("virality_score", "?")
+        if isinstance(v_score, (int, float)):
+            st.progress(min(int(v_score), 10) / 10, text=f"Virality Potential: {int(v_score)}/10")
+
+        v_cols = st.columns(4)
+        v_cols[0].metric("Visual Wow", f"{virality.get('visual_wow', '?')}/10")
+        v_cols[1].metric("Shareability", f"{virality.get('shareability', '?')}/10")
+        v_cols[2].metric("Trend Fit", f"{virality.get('trend_fit', '?')}/10")
+        v_cols[3].metric("Uniqueness", f"{virality.get('uniqueness', '?')}/10")
+
+        if virality.get("virality_explanation"):
+            st.caption(virality["virality_explanation"])
+
+    # ── What Makes It Different ─────────────────────────────────────
+    if comp.get("what_makes_it_different"):
+        st.info(f"**What's actually different:** {comp['what_makes_it_different']}")
+
+    # ── Content Verdict ─────────────────────────────────────────────
     st.markdown("---")
     cv = result.get("content_verdict", {})
     verdict = cv.get("verdict", "UNKNOWN")
@@ -253,19 +291,21 @@ if check_btn and url:
     else:
         css = "verdict-skip"
 
-    hype_bar = "🔥" * int(hype_score) if isinstance(hype_score, int) else "?"
+    hype_bar = "🔥" * int(hype_score) if isinstance(hype_score, (int, float)) else "?"
 
     st.markdown(f"""
 <div class="{css}">
-    <h3>📣 {verdict}</h3>
+    <h3>{verdict}</h3>
     <p><strong>Hype Score:</strong> {hype_bar} ({hype_score}/10)</p>
     <p>{cv.get('reason', '')}</p>
 </div>
 """, unsafe_allow_html=True)
 
-    if cv.get("angle"):
-        st.info(f"💡 **Content Angle:** {cv['angle']}")
+    if cv.get("hook"):
+        st.markdown(f'**Reel Hook:** *"{cv["hook"]}"*')
+    if cv.get("reel_format"):
+        st.caption(f"Suggested format: {cv['reel_format']}")
 
     summary = result.get("summary", "")
     if summary:
-        st.caption(summary)
+        st.markdown(f"**Bottom line:** {summary}")

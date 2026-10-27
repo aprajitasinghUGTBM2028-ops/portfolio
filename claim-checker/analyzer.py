@@ -42,11 +42,14 @@ def get_client():
     return OpenAI(api_key=api_key)
 
 
-def generate(client, prompt: str, **kwargs) -> str:
+def generate(client, prompt: str, prefer_model: str = None, **kwargs) -> str:
     """Try multiple models with retries."""
     prompt = _clean_text(prompt)
+    models = MODELS
+    if prefer_model:
+        models = [prefer_model] + [m for m in MODELS if m != prefer_model]
     last_error = None
-    for model in MODELS:
+    for model in models:
         for attempt in range(3):
             try:
                 response = client.chat.completions.create(
@@ -183,9 +186,13 @@ def verify_claims(client, claims_data: dict, content: dict) -> dict:
     elif content.get("source_type") == "instagram":
         source_text = content.get("caption", content.get("text", ""))[:2000]
 
-    prompt = f"""You are a rigorous AI tool reviewer. Given the extracted claims about an AI tool, verify each one and assess how tryable this tool actually is.
+    prompt = f"""You are a brutally honest AI tool reviewer who has personally tested hundreds of tools. You don't just read marketing pages — you think about what ACTUALLY happens when someone tries this tool. You write for content creators who need to decide in 30 seconds: is this worth my time?
 
-Use your web search capability to look up current information about the tools and models mentioned. AI moves fast — verify model names, versions, pricing, and features against real-time web data rather than relying only on your training data.
+IMPORTANT RULES:
+- NEVER say "confirmed" just because the website claims something. That's circular. Only confirm if you have INDEPENDENT evidence (your own knowledge, the tool's actual architecture, user reviews, GitHub activity, etc.)
+- If you don't know whether a claim is true, say "unverified" — don't guess.
+- Be specific. "This tool is interesting" is banned. "This generates 30-second videos from a single text prompt, similar to Runway but focused on product demos" is good.
+- Think about what a non-technical person would experience trying this for the first time.
 
 EXTRACTED CLAIMS:
 {claims_json}
@@ -194,21 +201,44 @@ SOURCE CONTENT (for reference):
 {source_text}
 {pricing_info}
 
-TASK — For each claim, assess:
-1. **Verdict**: "confirmed" (evidence supports it), "partially_true" (some truth but overstated), or "exaggerated" (you have positive evidence it's misleading)
-2. **Evidence**: Brief explanation of why you gave that verdict
-3. **Red flags**: Any issues (requires paid API, complex setup, limited scope, etc.)
+SECTION 1 — CLAIM VERIFICATION
+For each claim:
+- verdict: "confirmed" (you have independent evidence), "partially_true" (has a catch), "exaggerated" (misleading), or "unverified" (can't confirm either way)
+- evidence: What SPECIFIC evidence do you have? Not "the website says so" — that's just repeating the claim. What do you actually KNOW about this tool or similar tools?
+- red_flags: Concrete issues, not vague warnings
 
-Then assess TRYABILITY — can someone actually try this tool right now?
-- free_tier: Is there a free option? (yes/no/unclear)
-- setup_time: Rough estimate — under 10 min, 10-30 min, 30+ min, or unknown
-- visible_result: Can you get a tangible output quickly? (yes/no/unclear)
-- blockers: List any blockers (needs API key, requires signup, paid only, complex deps, etc.)
+SECTION 2 — TRYABILITY (think like a non-coder friend asking "how do I try this?")
+- free_tier: yes/no/freemium (free but limited)/unclear — and if freemium, what do you get for free?
+- setup_time_minutes: Your honest estimate in minutes. Think through: do they need to sign up? Verify email? Enter payment? Install anything? Wait for access?
+- visible_result: yes/no/unclear — can they get something cool to screenshot/screen-record within the first try?
+- blockers: Be specific — not "requires signup" but "requires Google account signup + email verification, takes ~2 min"
 
-Finally, give a CONTENT VERDICT for a social media content creator:
-- "COVER IT" — claims hold up, tool is tryable, good content potential
-- "COVER THE GAP" — overhyped BUT interesting — the lie itself is the content angle
-- "SKIP" — too expensive, too complex, too boring, or too niche
+SECTION 3 — SETUP GUIDE (write this for someone who has never used a terminal)
+Write 3-6 numbered steps. Use plain English. Example:
+  "1. Go to toolname.com and click Sign Up"
+  "2. Sign in with your Google account (no credit card needed)"
+  "3. Click 'New Project' and paste any text"
+  "4. Hit Generate — you'll see your result in about 10 seconds"
+If the tool requires coding or API keys, say that clearly in step 1 so they know upfront.
+
+SECTION 4 — VIRALITY ASSESSMENT (think like a content strategist)
+- visual_wow: 1-10 — Does this produce something that makes people stop scrolling? A text-based tool scores 2. A tool that generates stunning videos scores 9.
+- shareability: 1-10 — Would someone screenshot/screen-record their result and share it? Can viewers immediately understand what they're seeing?
+- trend_fit: 1-10 — Does this fit current social media trends (AI demos, before/after, "I replaced X with AI", tool reveals, etc.)?
+- uniqueness: 1-10 — Is this the first tool doing this, or the 50th ChatGPT wrapper? Has this been covered to death already?
+- virality_score: average of the above four, rounded
+- virality_explanation: One sentence explaining the score honestly
+
+SECTION 5 — HONEST COMPARISON
+- similar_to: "Think of it as [well-known tool/concept] but [key difference]" — e.g. "Canva but for video ads" or "ChatGPT with a nicer UI, nothing new under the hood"
+- what_makes_it_different: One sentence — what genuinely sets this apart? If nothing, say "Nothing — this is a wrapper/clone of [X]"
+- who_is_this_for: One sentence — "Perfect for [specific person] who needs [specific thing]"
+
+SECTION 6 — CONTENT VERDICT
+- verdict: "COVER IT" / "COVER THE GAP" / "SKIP"
+- reason: 2-3 sentences. Be opinionated. Would YOU make a reel about this?
+- hook: Write the actual first line of a reel script. Not a generic "explore the capabilities" — write something like "This AI tool just made Canva obsolete. Here's what happened when I tested it." or "Everyone's hyping this tool but nobody's showing you THIS..."
+- reel_format: Suggest the best format — "screen recording with voiceover", "before/after split", "reaction video", "tutorial walkthrough", "myth-busting", etc.
 
 Return ONLY valid JSON:
 {{
@@ -216,28 +246,48 @@ Return ONLY valid JSON:
   "verified_claims": [
     {{
       "claim": "the claim text",
-      "verdict": "confirmed|partially_true|exaggerated",
-      "evidence": "brief explanation",
-      "red_flags": ["flag1", "flag2"]
+      "verdict": "confirmed|partially_true|exaggerated|unverified",
+      "evidence": "specific evidence, not just repeating the claim",
+      "red_flags": ["specific flag"]
     }}
   ],
   "tryability": {{
-    "free_tier": "yes|no|unclear",
-    "setup_time": "under 10 min|10-30 min|30+ min|unknown",
+    "free_tier": "yes|no|freemium|unclear",
+    "free_tier_detail": "what you get for free, if anything",
+    "setup_time_minutes": 5,
     "visible_result": "yes|no|unclear",
-    "blockers": ["blocker1"],
+    "blockers": ["specific blocker with detail"],
     "score": 1-5
+  }},
+  "setup_guide": [
+    "Step 1: ...",
+    "Step 2: ...",
+    "Step 3: ..."
+  ],
+  "virality": {{
+    "visual_wow": 1-10,
+    "shareability": 1-10,
+    "trend_fit": 1-10,
+    "uniqueness": 1-10,
+    "virality_score": 1-10,
+    "virality_explanation": "one honest sentence"
+  }},
+  "comparison": {{
+    "similar_to": "It's like X but Y",
+    "what_makes_it_different": "one sentence",
+    "who_is_this_for": "one sentence"
   }},
   "content_verdict": {{
     "verdict": "COVER IT|COVER THE GAP|SKIP",
-    "reason": "One-paragraph explanation of why, written for a content creator deciding what to feature",
-    "angle": "If covering, what's the content angle? The hook for a reel or post."
+    "reason": "2-3 opinionated sentences",
+    "hook": "The actual first line of a reel script",
+    "reel_format": "suggested format"
   }},
   "hype_score": 1-10,
-  "summary": "2-3 sentence overall assessment"
+  "summary": "2-3 sentence brutally honest assessment"
 }}"""
 
-    text = generate(client, prompt, use_search=True)
+    text = generate(client, prompt, prefer_model="gpt-4o")
 
     # Clean markdown code fences
     if text.startswith("```"):
