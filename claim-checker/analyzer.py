@@ -6,24 +6,42 @@ score tryability, and produce a content verdict.
 import os
 import json
 import time
+import re
 from openai import OpenAI
 
 MODELS = ["gpt-4o-mini", "gpt-4o"]
 
 
+def _clean_text(text: str) -> str:
+    """Remove non-UTF-8 characters and null bytes from text."""
+    if not text:
+        return ""
+    text = text.encode("utf-8", errors="replace").decode("utf-8")
+    text = text.replace("\x00", "")
+    text = re.sub(r'[\ud800-\udfff]', '', text)
+    return text
+
+
 def get_client():
     """Initialize and return the OpenAI client."""
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError(
             "OPENAI_API_KEY not set.\n"
             "Get one at https://platform.openai.com/api-keys"
+        )
+    api_key = api_key.encode("ascii", errors="ignore").decode("ascii").strip()
+    if len(api_key) < 20:
+        raise RuntimeError(
+            "API key looks invalid after sanitization (too short).\n"
+            "Re-paste your key in Streamlit secrets — make sure to use plain straight quotes."
         )
     return OpenAI(api_key=api_key)
 
 
 def generate(client, prompt: str, **kwargs) -> str:
     """Try multiple models with retries."""
+    prompt = _clean_text(prompt)
     last_error = None
     for model in MODELS:
         for attempt in range(3):
@@ -49,6 +67,11 @@ def generate(client, prompt: str, **kwargs) -> str:
                     raise RuntimeError(
                         f"OpenAI API error: {err}\n"
                         "Check that your API key is valid at https://platform.openai.com/api-keys"
+                    )
+                if "codec" in err.lower() or "encode" in err.lower():
+                    raise RuntimeError(
+                        f"Encoding error: {err}\n"
+                        "The content may contain unsupported characters."
                     )
                 break
     raise RuntimeError(

@@ -51,12 +51,18 @@ st.markdown("""
 
 # ── API Key ──────────────────────────────────────────────────────────
 
+def sanitize_key(key):
+    """Remove hidden unicode characters that sneak in from copy-paste."""
+    if not key:
+        return ""
+    return str(key).encode("ascii", errors="ignore").decode("ascii").strip()
+
 def get_api_key():
     """Check for API key in Streamlit secrets, then env, then sidebar input."""
     try:
-        return st.secrets["OPENAI_API_KEY"]
+        return sanitize_key(st.secrets["OPENAI_API_KEY"])
     except (KeyError, FileNotFoundError):
-        return os.environ.get("OPENAI_API_KEY", "")
+        return sanitize_key(os.environ.get("OPENAI_API_KEY", ""))
 
 stored_key = get_api_key()
 
