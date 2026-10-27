@@ -45,21 +45,23 @@ def _clean_text(text: str) -> str:
 
 
 def _fence(label: str, text: str) -> str:
+    safe = _clean_text(text).replace("</data>", "&lt;/data&gt;")
     return (
         f'<data label="{label}" instructions="none">\n'
-        f"{_clean_text(text)}\n"
+        f"{safe}\n"
         f"</data>"
     )
 
 
-def get_client():
-    raw_key = os.environ.get("OPENAI_API_KEY", "")
-    raw_key = "".join(raw_key.split())
-    api_key = "".join(c for c in raw_key if ord(c) < 128)
+def get_client(api_key: str = ""):
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not set.")
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+    api_key = "".join(api_key.split())
+    api_key = "".join(c for c in api_key if ord(c) < 128)
+    if not api_key:
+        raise RuntimeError("OpenAI API key not configured.")
     if len(api_key) < 20:
-        raise RuntimeError("API key looks invalid.")
+        raise RuntimeError("OpenAI API key looks invalid (too short).")
     return OpenAI(api_key=api_key)
 
 
@@ -1028,8 +1030,8 @@ def _validate_full_result(result: dict, tool_url: str) -> dict:
 # Main pipeline
 # ═══════════════════════════════════════════════════════════════════
 
-def analyze(content: dict) -> dict:
-    client = get_client()
+def analyze(content: dict, api_key: str = "") -> dict:
+    client = get_client(api_key)
     tool_url = content.get("url", "")
 
     if content.get("source_type") == "instagram":

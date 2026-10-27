@@ -5,6 +5,7 @@ and whether it's worth covering.
 """
 
 import os
+import html as html_mod
 import streamlit as st
 from fetcher import fetch
 from analyzer import analyze
@@ -162,7 +163,6 @@ if check_btn and url:
         st.error(f"Daily limit reached ({daily_cap} checks). Come back tomorrow or adjust the cap in secrets.")
         st.stop()
 
-    os.environ["OPENAI_API_KEY"] = api_key
     st.session_state.usage_count += 1
 
     with st.status("Analyzing...", expanded=True) as status:
@@ -227,14 +227,18 @@ if check_btn and url:
             st.write("Step 8/9: Critic checking report against evidence...")
             st.write("Step 9/9: Writing hooks from evidence...")
         try:
-            result = analyze(content)
+            result = analyze(content, api_key=api_key)
         except RuntimeError as e:
             status.update(label="Analysis failed", state="error")
             st.error(str(e))
             st.stop()
         except Exception as e:
             status.update(label="Analysis failed", state="error")
-            st.error(f"API error: {e}")
+            err_msg = str(e)
+            if "sk-" in err_msg or "key" in err_msg.lower():
+                st.error("API error occurred. Check your API key and try again.")
+            else:
+                st.error(f"API error: {err_msg}")
             st.stop()
         status.update(label="Analysis complete", state="complete")
 
@@ -463,7 +467,7 @@ if check_btn and url:
             }
             icon = icon_map.get(verdict, "❓")
 
-            st.markdown(f"**{i}. {vc['claim']}**")
+            st.markdown(f"**{i}. {vc.get('claim', 'Unknown claim')}**")
             st.markdown(f"{icon} **{verdict}** — {vc.get('evidence', '')}")
             flags = vc.get("red_flags", [])
             if flags:
@@ -550,8 +554,8 @@ if check_btn and url:
 
         st.markdown(f"""
 <div class="{css}">
-    <h3>{verdict}</h3>
-    <p>{cv.get('reason', '')}</p>
+    <h3>{html_mod.escape(str(verdict))}</h3>
+    <p>{html_mod.escape(str(cv.get('reason', '')))}</p>
 </div>
 """, unsafe_allow_html=True)
 

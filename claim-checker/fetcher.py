@@ -5,6 +5,8 @@ Deep-fetches internal links one level deep (blog, pricing, docs, etc.).
 """
 
 import re
+import socket
+import ipaddress
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, urlunparse, parse_qs, urlencode
@@ -23,6 +25,38 @@ SUBPAGE_KEYWORDS = [
     "changelog", "analysis", "report", "review", "guide",
 ]
 
+SUBPAGE_PRIORITY = [
+    "pricing", "price", "plan", "sponsor", "customize",
+    "templates", "features", "blog", "about", "docs",
+    "faq", "documentation", "changelog", "guide", "review",
+]
+
+
+def _is_safe_url(url: str) -> bool:
+    """Block private IPs, localhost, and non-HTTP schemes."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = parsed.hostname or ""
+    if not host:
+        return False
+    if host in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            return False
+    except ValueError:
+        try:
+            for info in socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_STREAM):
+                addr = info[4][0]
+                ip = ipaddress.ip_address(addr)
+                if ip.is_private or ip.is_loopback or ip.is_link_local:
+                    return False
+        except (socket.gaierror, OSError):
+            pass
+    return True
+
 
 def strip_utm(url: str) -> str:
     """Remove UTM and tracking parameters from a URL."""
@@ -37,10 +71,10 @@ def strip_utm(url: str) -> str:
 def classify_url(url: str) -> str:
     """Classify a URL into a type: github, instagram, or web."""
     parsed = urlparse(url)
-    host = parsed.hostname or ""
-    if "github.com" in host:
+    host = (parsed.hostname or "").lower()
+    if host == "github.com" or host.endswith(".github.com"):
         return "github"
-    if "instagram.com" in host:
+    if host == "instagram.com" or host.endswith(".instagram.com"):
         return "instagram"
     return "web"
 
@@ -180,6 +214,16 @@ def _extract_page_text(resp) -> dict:
             seen_paths.add(link["path"])
             unique_links.append(link)
 
+    # Sort by keyword priority so pricing/sponsor come first
+    def _link_priority(link):
+        path_lower = link["path"].lower().strip("/")
+        for i, kw in enumerate(SUBPAGE_PRIORITY):
+            if kw in path_lower:
+                return i
+        return len(SUBPAGE_PRIORITY)
+
+    unique_links.sort(key=_link_priority)
+
     return {
         "title": title,
         "meta_description": meta_desc,
@@ -200,7 +244,7 @@ def _fetch_subpages(links: list, max_pages: int = 5) -> list:
                 for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
                     tag.decompose()
                 text = soup.get_text(separator="\n", strip=True)
-                text = re.sub(r'\n{3,}', '\n\n', text)[:4000]
+                text = re.sub(r'\n{3,}', '\n\n', text)[:1500]
                 if len(text) > 100:
                     subpages.append({
                         "url": strip_utm(link["url"]),
@@ -215,6 +259,8 @@ def _fetch_subpages(links: list, max_pages: int = 5) -> list:
 
 def fetch_webpage(url: str) -> dict:
     """Fetch a web page and its key sub-pages (blog, pricing, docs, etc.)."""
+    if not _is_safe_url(url):
+        return {"ok": False, "error": "URL blocked: private/local addresses are not allowed."}
     try:
         resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
 
@@ -227,6 +273,13 @@ def fetch_webpage(url: str) -> dict:
         page_data = _extract_page_text(resp)
 
         main_text = page_data["text"][:12000]
+
+        # Thin content check — JS-rendered or bot-blocked pages
+        if len(main_text.strip()) < 300:
+            return {
+                "ok": False,
+                "error": "Page returned very little text (likely JavaScript-rendered or bot-blocked). Paste the page content manually.",
+            }
 
         # Check for pricing signals
         pricing_keywords = ["pricing", "free tier", "free plan", "pro plan",

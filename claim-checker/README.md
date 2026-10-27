@@ -2,181 +2,110 @@
 
 **Paste an AI tool's URL. Get a verdict: what's real, what's hype, and whether it's worth covering.**
 
-**[Try it live](https://ideahypeanalyser.streamlit.app)** — just bring a free Gemini API key.
+**[Try it live](https://ideahypeanalyser.streamlit.app)**
 
 Built for content researchers who evaluate dozens of AI tools weekly and need to quickly separate genuine capabilities from marketing fluff.
 
 ## The Problem
 
-AI content pages like [@aistuff.muu](https://instagram.com/aistuff.muu) discover 10-20 new AI tools per week through reels, tweets, and launches. Most make bold claims — "replaces your entire workflow," "no code needed," "completely free." Before investing hours into a feature or tutorial, a researcher needs to know:
+AI content pages discover 10-20 new AI tools per week through reels, tweets, and launches. Most make bold claims — "replaces your entire workflow," "no code needed," "completely free." Before investing hours into a feature or tutorial, a researcher needs to know:
 
 - Do the claims actually hold up?
 - Can someone try this tool in under 10 minutes?
 - Is there a free tier, or is "free" just the landing page?
 - What's the content angle — the real story vs. the marketing story?
 
-Doing this manually takes 30-60 minutes per tool. This tool does it in under a minute — via CLI or a web interface.
+Doing this manually takes 30-60 minutes per tool. This tool does it in under a minute.
 
 ## How It Works
 
+The tool runs a 9-step AI pipeline:
+
 ```
-Input (URL) → Fetch content → Extract claims → Verify each claim → Score tryability → Content verdict
+URL → Fetch + sub-pages → Classify & plan → Search for evidence → Extract facts
+    → Validate facts (code) → Fill gaps → Write report → Critique report → Hooks
 ```
 
-**Pipeline:**
-1. **Fetch** — Pulls content from GitHub READMEs, landing pages, or accepts pasted Instagram captions
-2. **Extract Claims** — Gemini identifies 3-7 specific capability, performance, ease-of-use, scope, and cost claims
-3. **Verify** — Each claim gets a verdict: Confirmed, Partially True, or Exaggerated, with evidence
-4. **Tryability Score** — Free tier? Setup under 10 min? Visible result? Blockers?
-5. **Content Verdict** — One of three outcomes:
-   - **COVER IT** — Claims hold, tool is tryable, good content potential
-   - **COVER THE GAP** — Overhyped, but the gap itself is the content angle
-   - **SKIP** — Too expensive, too complex, or too boring
+1. **Classify & Plan** — AI identifies the tool type and plans what evidence to gather
+2. **Build Sources** — Code indexes all fetched content by source ID
+3. **Search for Evidence** — AI runs web searches (Reddit, Product Hunt, blogs) for independent verification
+4. **Extract Facts** — AI extracts structured facts with exact quotes and source IDs
+5. **Validate Facts** — Code checks quotes against source text, fixes statuses using domain comparison
+6. **Find Gaps** — AI identifies missing evidence and runs additional searches if needed
+7. **Write Report** — AI writes a report citing only validated fact IDs
+8. **Critique Report** — A separate AI call checks the report against the evidence
+9. **Write Hooks** — AI generates reel hooks from evidence, code validates numbers and attribution
+
+**Key design decisions:**
+- **Code computes verdicts, not the model** — the model returns evidence IDs, code derives SITE_SAYS/INDEPENDENT/UNVERIFIABLE/CONTRADICTED from source domains
+- **Domain-based independence** — compares source URL domains against the tool's own domain, not a hardcoded whitelist
+- **Prompt injection fencing** — all page content wrapped in `<data instructions="none">` tags
+- **Score clamping** — all scores enforced by code (tryability 1-5, virality/hype 1-10)
 
 ## Setup
 
 ### Requirements
 - Python 3.9+
-- A free Google Gemini API key
+- An OpenAI API key (GPT-4o with web search)
 
 ### Installation
 
 ```bash
 git clone https://github.com/aprajitasinghUGTBM2028-ops/portfolio.git
-cd portfolio
-pip install -r claim-checker/requirements.txt
+cd portfolio/claim-checker
+pip install -r requirements.txt
 ```
 
-### API Key
+### Configuration
 
-Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey), then:
+1. Copy the example secrets file:
+   ```bash
+   cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+   ```
+2. Edit `.streamlit/secrets.toml` with your OpenAI API key and app password.
 
-```bash
-export GEMINI_API_KEY='your-key-here'
-```
-
-## Usage
-
-### Web Interface (Streamlit)
-
-**Live app:** [ideahypeanalyser.streamlit.app](https://ideahypeanalyser.streamlit.app)
-
-Or run locally:
+### Run
 
 ```bash
+cd claim-checker
 streamlit run app.py
 ```
 
-Enter your Gemini API key in the sidebar, paste a URL, and click "Check it."
+Or use the [live deployment](https://ideahypeanalyser.streamlit.app).
 
-### CLI — Check a GitHub repo
-```bash
-python main.py https://github.com/assafelovic/gpt-researcher
-```
+## Cost
 
-### Check a landing page
-```bash
-python main.py https://some-ai-tool.com
-```
+Each check runs 5-7 API calls (one with web search). Estimated cost: **$0.05-0.15 per check** depending on page size and whether gap searches are needed. Set a monthly spend limit on your OpenAI key.
 
-### Check an Instagram reel (paste caption manually)
-```bash
-python main.py https://instagram.com/reel/xyz
-# You'll be prompted to paste the caption
-```
+## Supported Input Types
 
-### With caption pre-provided
-```bash
-python main.py https://instagram.com/reel/xyz --caption "This AI tool is insane! It can..."
-```
-
-### Save JSON output
-```bash
-python main.py https://github.com/owner/repo --json
-# Saves full analysis to last_result.json
-```
-
-## Example Output
-
-```
-╔══════════════════════════════════════════════════╗
-║           AI HYPE CLAIM CHECKER                  ║
-╚══════════════════════════════════════════════════╝
-
-✓ Fetched GitHub repo: assafelovic/gpt-researcher
-  ⭐ 16000 stars | Python | Last push: 2024-12-15
-
-🔍 TOOL: GPT Researcher
-   Open-source deep research agent for web and local research
-
-📋 EXTRACTED CLAIMS:
-  1. [Capability] Can generate detailed research reports from 20+ sources
-  2. [Performance] Produces reports exceeding 2,000 words
-  3. [Cost] Open source and free to use
-  ...
-
-🔬 CLAIM VERIFICATION:
-  1. Can generate detailed research reports from 20+ sources
-     → CONFIRMED
-     README shows multi-agent architecture with crawler agents
-  2. ...
-
-🧪 TRYABILITY: [███░░] 3/5
-   Free tier:      yes (open source)
-   Setup time:     10-30 min
-   Visible result: yes
-   Blockers: Requires OpenAI API key, Tavily API key
-
-═══════════════════════════════════════════════════
-
-📣 CONTENT VERDICT: COVER THE GAP
-   Hype Score: 🔥🔥🔥🔥🔥🔥 (6/10)
-
-   Why: The tool is genuinely capable but claims "free" while requiring
-   paid API keys (OpenAI + Tavily). The gap between "open source" and
-   "actually free to run" is the content angle.
-
-   💡 Content Angle: "This research agent is powerful but 'open source'
-   doesn't mean 'free' — here's what it actually costs to run."
-```
-
-## Edge Cases Handled
-
-| Scenario | Behavior |
-|----------|----------|
-| Dead link / domain down | Reports "Could not connect" with the URL |
-| 404 page | Reports "Page not found" |
-| Not an AI tool | Detects and reports "This doesn't appear to be an AI tool" |
-| Instagram reel | Prompts for manual caption input (Instagram requires auth) |
-| No claims found | Reports "Could not extract specific claims" |
-| GitHub repo with no README | Reports "No README found" |
-| Rate-limited GitHub API | Falls back to raw.githubusercontent.com |
+| Input | How it works |
+|-------|-------------|
+| Landing page URL | Fetches page + sub-pages (pricing, blog, docs, sponsor) |
+| GitHub repo URL | Fetches README via API with raw fallback |
+| Instagram reel URL | Prompts for manual caption paste (Instagram blocks auto-fetch) |
 
 ## Project Structure
 
 ```
 claim-checker/
-├── app.py           # Streamlit web interface
-├── main.py          # CLI interface and pretty output
-├── fetcher.py       # URL fetching and content extraction
-├── analyzer.py      # Gemini-powered claim extraction and verification
-├── requirements.txt # Python dependencies
-└── README.md        # This file
+├── app.py              # Streamlit web interface
+├── fetcher.py          # URL fetching, sub-page crawling, SSRF protection
+├── analyzer.py         # 9-step AI pipeline with code validators
+├── requirements.txt    # Python dependencies
+├── .gitignore
+├── .streamlit/
+│   ├── config.toml
+│   └── secrets.toml.example
+├── README.md
+├── TECHNICAL_NOTE.md
+└── AI_DISCLOSURE.md
 ```
 
 ## Limitations
 
-- **Instagram scraping**: Can't auto-fetch reel captions (requires login). User pastes caption manually.
-- **LLM accuracy**: Gemini's verification is reasoning-based, not live-testing. It can't actually *try* the tool.
-- **Single-pass**: Doesn't follow links from the page to verify claims against documentation.
+- **Instagram scraping**: Can't auto-fetch reel captions (auth wall). User pastes caption manually.
+- **LLM accuracy**: GPT-4o's verification uses web search, not live-testing. It can't actually try the tool.
+- **Run-to-run variance**: Different runs may produce slightly different results due to web search variability.
 - **Rate limits**: GitHub API has rate limits for unauthenticated requests (fallback handles this).
-- **Network-dependent**: Requires internet access to fetch URLs and call Gemini API.
-
-## What I'd Build Next (with another day)
-
-1. **Auto-follow links** — Click through to docs/pricing pages for deeper verification
-2. **Screenshot capture** — Visually show what the tool looks like
-3. **Batch mode** — Check a list of URLs from a file
-4. **History tracking** — Save past checks to compare tools
-5. **Reel caption extraction** — Use browser automation to grab Instagram captions
-6. **Live testing** — Actually try free-tier tools and report real results
+- **JS-rendered pages**: Pages that require JavaScript to render return thin content and are rejected with a message to paste text manually.
