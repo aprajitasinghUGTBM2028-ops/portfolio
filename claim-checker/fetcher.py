@@ -174,19 +174,68 @@ def fetch_webpage(url: str) -> dict:
         return {"ok": False, "error": f"Failed to fetch page: {e}"}
 
 
-def fetch_instagram_caption(url: str) -> dict:
-    """
-    Instagram reels/posts can't be scraped easily without auth.
-    Return guidance for manual caption input.
-    """
-    return {
-        "ok": True,
-        "source_type": "instagram",
-        "url": url,
-        "needs_manual_input": True,
-        "message": "Instagram requires login to fetch reel captions. "
-                   "Please paste the caption text directly.",
-    }
+def fetch_instagram(url: str) -> dict:
+    """Fetch Instagram post/reel content from meta tags and page text."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
+        if not resp.ok:
+            return {
+                "ok": True, "source_type": "instagram", "url": url,
+                "needs_manual_input": True,
+                "message": f"Could not fetch Instagram page (status {resp.status_code}). Paste the caption below.",
+            }
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        caption = ""
+        # Try og:description (Instagram puts captions here for public posts)
+        og = soup.find("meta", property="og:description")
+        if og and og.get("content"):
+            caption = og["content"]
+        # Try regular description
+        if not caption:
+            desc = soup.find("meta", attrs={"name": "description"})
+            if desc and desc.get("content"):
+                caption = desc["content"]
+        # Try og:title
+        if not caption:
+            og_title = soup.find("meta", property="og:title")
+            if og_title and og_title.get("content"):
+                caption = og_title["content"]
+
+        title = ""
+        if soup.title and soup.title.string:
+            title = soup.title.string.strip()
+
+        # Also grab any visible text as fallback
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        page_text = soup.get_text(separator="\n", strip=True)
+        page_text = re.sub(r'\n{3,}', '\n\n', page_text)[:4000]
+
+        if not caption and len(page_text) < 100:
+            return {
+                "ok": True, "source_type": "instagram", "url": url,
+                "needs_manual_input": True,
+                "message": "Could not extract caption automatically. Paste the caption or what the creator says in the reel.",
+            }
+
+        return {
+            "ok": True,
+            "source_type": "instagram",
+            "url": url,
+            "caption": caption or page_text[:2000],
+            "title": title,
+            "text": f"{caption}\n\n{page_text}" if caption else page_text,
+            "auto_fetched": True,
+        }
+
+    except requests.exceptions.RequestException:
+        return {
+            "ok": True, "source_type": "instagram", "url": url,
+            "needs_manual_input": True,
+            "message": "Could not connect to Instagram. Paste the caption or what the creator says in the reel.",
+        }
 
 
 def fetch(url: str) -> dict:
@@ -202,7 +251,7 @@ def fetch(url: str) -> dict:
     if url_type == "github":
         return fetch_github(url)
     elif url_type == "instagram":
-        return fetch_instagram_caption(url)
+        return fetch_instagram(url)
     else:
         return fetch_webpage(url)
 

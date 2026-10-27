@@ -113,7 +113,7 @@ with col2:
 caption_input = None
 if url and ("instagram.com" in url.lower()):
     caption_input = st.text_area(
-        "Paste the Instagram caption (required for reels)",
+        "Optional: paste what the creator says in the reel (helps if auto-fetch misses it)",
         height=100,
     )
 
@@ -133,7 +133,7 @@ if check_btn and url:
 
         if content.get("needs_manual_input"):
             if not caption_input:
-                st.error("Instagram reel detected — please paste the caption above and try again.")
+                st.error("Could not fetch Instagram content automatically. Paste the caption or what the creator says above and try again.")
                 st.stop()
             content = {
                 "ok": True,
@@ -142,6 +142,9 @@ if check_btn and url:
                 "caption": caption_input,
                 "text": caption_input,
             }
+        elif content.get("source_type") == "instagram" and caption_input:
+            content["caption"] = caption_input
+            content["text"] = caption_input + "\n\n" + content.get("text", "")
 
         if not content.get("ok"):
             st.error(f"Fetch failed: {content.get('error', 'Unknown error')}")
@@ -155,7 +158,10 @@ if check_btn and url:
         elif content["source_type"] == "web":
             st.write(f"Fetched page: **{content.get('title', url)}**")
         elif content["source_type"] == "instagram":
-            st.write("Using provided Instagram caption")
+            if content.get("auto_fetched"):
+                st.write(f"Fetched Instagram content: **{content.get('title', url)}**")
+            else:
+                st.write("Using provided Instagram caption")
 
         # Step 2-3: Analyze
         st.write("Extracting claims...")
