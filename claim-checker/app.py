@@ -55,12 +55,15 @@ def sanitize_key(key):
     """Remove hidden unicode characters that sneak in from copy-paste."""
     if not key:
         return ""
-    return str(key).encode("ascii", errors="ignore").decode("ascii").strip()
+    raw = str(key)
+    clean = "".join(c for c in raw if ord(c) < 128).strip()
+    return clean
 
 def get_api_key():
     """Check for API key in Streamlit secrets, then env, then sidebar input."""
     try:
-        return sanitize_key(st.secrets["OPENAI_API_KEY"])
+        raw = st.secrets["OPENAI_API_KEY"]
+        return sanitize_key(raw)
     except (KeyError, FileNotFoundError):
         return sanitize_key(os.environ.get("OPENAI_API_KEY", ""))
 
@@ -70,7 +73,7 @@ with st.sidebar:
     st.header("Settings")
     if stored_key:
         api_key = stored_key
-        st.success("API key configured")
+        st.success(f"API key configured ({len(api_key)} chars, starts: {api_key[:8]}...)")
     else:
         api_key = st.text_input(
             "OpenAI API Key",

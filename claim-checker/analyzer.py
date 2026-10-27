@@ -24,17 +24,19 @@ def _clean_text(text: str) -> str:
 
 def get_client():
     """Initialize and return the OpenAI client."""
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    raw_key = os.environ.get("OPENAI_API_KEY", "")
+    api_key = "".join(c for c in raw_key if ord(c) < 128).strip()
     if not api_key:
         raise RuntimeError(
             "OPENAI_API_KEY not set.\n"
             "Get one at https://platform.openai.com/api-keys"
         )
-    api_key = api_key.encode("ascii", errors="ignore").decode("ascii").strip()
     if len(api_key) < 20:
         raise RuntimeError(
-            "API key looks invalid after sanitization (too short).\n"
-            "Re-paste your key in Streamlit secrets — make sure to use plain straight quotes."
+            f"API key invalid after cleaning. Raw length: {len(raw_key)}, "
+            f"clean length: {len(api_key)}, raw type: {type(raw_key).__name__}, "
+            f"raw repr start: {repr(raw_key[:30])}\n"
+            "Re-paste your key in Streamlit secrets with plain straight quotes."
         )
     return OpenAI(api_key=api_key)
 
