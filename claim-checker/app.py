@@ -34,10 +34,9 @@ st.markdown("""
     .verdict-cover { background: #d4edda; border-left: 4px solid #28a745; padding: 1rem; border-radius: 6px; }
     .verdict-gap { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; border-radius: 6px; }
     .verdict-skip { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; border-radius: 6px; }
-    .claim-confirmed { color: #28a745; font-weight: 600; }
-    .claim-reported { color: #17a2b8; font-weight: 600; }
-    .claim-self-reported { color: #ffc107; font-weight: 600; }
-    .claim-not-found { color: #6c757d; font-weight: 600; }
+    .claim-independent { color: #28a745; font-weight: 600; }
+    .claim-site-says { color: #6c757d; font-weight: 600; }
+    .claim-unverifiable { color: #ffc107; font-weight: 600; }
     .claim-contradicted { color: #dc3545; font-weight: 600; }
 </style>
 """, unsafe_allow_html=True)
@@ -402,6 +401,26 @@ if check_btn and url:
         if comp.get("who_is_this_for"):
             st.caption(comp["who_is_this_for"])
 
+        # ── Evidence Stats Banner ──────────────────────────────────
+        ev_stats = result.get("_evidence_stats", {})
+        if ev_stats:
+            ind = ev_stats.get("independent", 0)
+            ss = ev_stats.get("site_says", 0)
+            unv = ev_stats.get("unverifiable", 0)
+            total = ev_stats.get("total", 0)
+            st.caption(f"Evidence: {total} items — {ind} independent, {ss} site-says, {unv} unverifiable")
+        if result.get("_no_independent_sources"):
+            st.warning("No independent sources found. All evidence comes from the tool's own site.")
+
+        # ── Searches Run ───────────────────────────────────────────
+        searches = result.get("_searches_run", [])
+        if searches:
+            with st.expander("Searches run", expanded=False):
+                for s in searches:
+                    found = s.get("found", False)
+                    icon = "✅" if found else "❌"
+                    st.caption(f"{icon} {s.get('query', '?')}")
+
         # ── Evidence List ──────────────────────────────────────────
         evidence_list = result.get("evidence_list", [])
         if evidence_list:
@@ -409,26 +428,24 @@ if check_btn and url:
                 for ev in evidence_list:
                     status = ev.get("status", "?")
                     status_icons = {
-                        "CONFIRMED": "✅", "REPORTED": "📰",
-                        "SELF-REPORTED": "⚠️", "NOT FOUND": "❓",
-                        "CONTRADICTED": "❌",
+                        "SITE_SAYS": "📄", "INDEPENDENT": "✅",
+                        "UNVERIFIABLE": "❓", "CONTRADICTED": "❌",
                     }
                     icon = status_icons.get(status, "•")
                     src = ev.get("source_url") or ""
                     date = ev.get("date") or ""
                     date_str = f" ({date})" if date else ""
                     st.markdown(f"{icon} **{status}** — {ev.get('fact', '')}")
-                    if src and src not in ("null", "None"):
+                    if src and src not in ("null", "None", "official site", ""):
                         st.caption(f"Source: {src}{date_str}")
 
         # ── Claims & Verification ───────────────────────────────────
         st.markdown("### Claim Check")
         for i, vc in enumerate(result.get("verified_claims", []), 1):
-            verdict = vc.get("verdict", "NOT FOUND").upper()
+            verdict = vc.get("verdict", "UNVERIFIABLE").upper()
             icon_map = {
-                "CONFIRMED": "✅", "REPORTED": "📰",
-                "SELF-REPORTED": "⚠️", "NOT FOUND": "❓",
-                "CONTRADICTED": "❌",
+                "SITE_SAYS": "📄", "INDEPENDENT": "✅",
+                "UNVERIFIABLE": "❓", "CONTRADICTED": "❌",
             }
             icon = icon_map.get(verdict, "❓")
 
