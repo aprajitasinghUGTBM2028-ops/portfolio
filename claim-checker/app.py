@@ -133,7 +133,16 @@ if check_btn and url:
         # Step 2-3: Analyze
         st.write("Extracting claims...")
         st.write("Verifying & scoring...")
-        result = analyze(content)
+        try:
+            result = analyze(content)
+        except RuntimeError as e:
+            status.update(label="Analysis failed", state="error")
+            st.error(str(e))
+            st.stop()
+        except Exception as e:
+            status.update(label="Analysis failed", state="error")
+            st.error(f"Gemini API error: {e}")
+            st.stop()
         status.update(label="Analysis complete", state="complete")
 
     # ── Error states ─────────────────────────────────────────────────

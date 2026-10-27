@@ -8,7 +8,12 @@ import json
 import time
 from google import genai
 
-MODELS = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+]
 
 
 def get_client():
@@ -24,20 +29,30 @@ def get_client():
 
 def generate(client, prompt: str) -> str:
     """Try multiple models with retries to handle 503s and deprecations."""
+    last_error = None
     for model in MODELS:
         for attempt in range(3):
             try:
                 response = client.models.generate_content(model=model, contents=prompt)
                 return response.text.strip()
             except Exception as e:
+                last_error = e
                 err = str(e)
                 if "503" in err or "UNAVAILABLE" in err:
                     time.sleep(2 ** attempt)
                     continue
-                if "404" in err or "NOT_FOUND" in err:
+                if "404" in err or "NOT_FOUND" in err or "not found" in err.lower():
                     break
-                raise
-    raise RuntimeError("All Gemini models unavailable. Try again in a few minutes.")
+                if "400" in err or "INVALID" in err or "API key" in err.lower():
+                    raise RuntimeError(
+                        f"Gemini API error: {err}\n"
+                        "Check that your API key is valid at https://aistudio.google.com/apikey"
+                    )
+                break
+    raise RuntimeError(
+        f"All Gemini models failed. Last error: {last_error}\n"
+        "Try again in a few minutes, or check your API key."
+    )
 
 
 def extract_claims(client, content: dict) -> list[dict]:
