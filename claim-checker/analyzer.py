@@ -169,18 +169,9 @@ If this doesn't appear to be an AI tool, return:
 
     text = generate(client, prompt)
 
-    # Clean markdown code fences if present
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    text = text.strip()
-    if text.startswith("json"):
-        text = text[4:].strip()
-
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
+        return _parse_json_response(text)
+    except (json.JSONDecodeError, ValueError):
         return {"tool_name": "Parse Error", "tool_summary": "Could not parse LLM response", "claims": [], "raw": text}
 
 
@@ -342,7 +333,14 @@ Return ONLY valid JSON:
 
     text = generate(client, prompt, prefer_model="gpt-4o")
 
-    # Clean markdown code fences
+    try:
+        return _parse_json_response(text)
+    except (json.JSONDecodeError, ValueError):
+        return {"error": "Could not parse verification response", "raw": text}
+
+
+def _parse_json_response(text: str) -> dict:
+    """Clean markdown fences and parse JSON from LLM response."""
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]
     if text.endswith("```"):
@@ -350,18 +348,210 @@ Return ONLY valid JSON:
     text = text.strip()
     if text.startswith("json"):
         text = text[4:].strip()
+    return json.loads(text)
+
+
+def _identify_tool_from_reel(client, reel_text: str) -> dict:
+    """Identify the tool/product promoted in an Instagram reel."""
+    prompt = f"""An Instagram reel is promoting an AI tool or tech product. From the text below, identify:
+1. The tool's name
+2. Its official URL (if mentioned, or if you know it from your training data)
+3. What to search to find it
+
+REEL CONTENT:
+{_clean_text(reel_text[:2000])}
+
+Return ONLY valid JSON:
+{{
+  "tool_name": "the tool name",
+  "tool_url": "https://... or null if unknown",
+  "search_terms": "what to search for"
+}}"""
+    text = generate(client, prompt)
+    try:
+        return _parse_json_response(text)
+    except (json.JSONDecodeError, ValueError):
+        return {"tool_name": "Unknown", "tool_url": None, "search_terms": ""}
+
+
+def _analyze_reel(client, content: dict) -> dict:
+    """Full reel analysis pipeline: identify tool → fetch official page → analyze."""
+    from fetcher import fetch_webpage, fetch_github, classify_url
+
+    reel_text = content.get("caption", content.get("text", ""))
+    reel_url = content.get("url", "")
+
+    # Step 1: Identify the tool from the reel
+    tool_info = _identify_tool_from_reel(client, reel_text)
+
+    # Step 2: Try to fetch the tool's official page
+    tool_page = None
+    tool_url = tool_info.get("tool_url")
+    if tool_url:
+        url_type = classify_url(tool_url)
+        if url_type == "github":
+            tool_page = fetch_github(tool_url)
+        else:
+            tool_page = fetch_webpage(tool_url)
+        if not tool_page.get("ok"):
+            tool_page = None
+
+    # Also try to extract URLs directly from the reel text
+    if not tool_page:
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]*'
+        found_urls = re.findall(url_pattern, reel_text)
+        for found_url in found_urls:
+            if "instagram.com" not in found_url:
+                url_type = classify_url(found_url)
+                if url_type == "github":
+                    tool_page = fetch_github(found_url)
+                else:
+                    tool_page = fetch_webpage(found_url)
+                if tool_page and tool_page.get("ok"):
+                    tool_url = found_url
+                    break
+                tool_page = None
+
+    # Step 3: Build the tool page context
+    tool_page_section = ""
+    if tool_page and tool_page.get("ok"):
+        if tool_page.get("source_type") == "github":
+            meta = tool_page.get("meta", {})
+            tool_page_section = f"""
+TOOL'S OFFICIAL PAGE ({tool_url}):
+GitHub: {tool_page.get('owner', '?')}/{tool_page.get('repo', '?')}
+Stars: {meta.get('stars', '?')} | Language: {meta.get('language', '?')} | Last push: {str(meta.get('last_push', '?'))[:10]}
+Description: {meta.get('description', 'N/A')}
+
+README:
+{tool_page.get('readme', '')[:6000]}"""
+        else:
+            tool_page_section = f"""
+TOOL'S OFFICIAL PAGE ({tool_url}):
+Title: {tool_page.get('title', 'N/A')}
+Meta: {tool_page.get('meta_description', '')}
+
+Page content:
+{tool_page.get('text', '')[:6000]}"""
+    else:
+        tool_page_section = "\nTOOL'S OFFICIAL PAGE: Could not be fetched. Base your analysis only on the reel content and your training knowledge. Be explicit about what you could not verify."
+
+    # Step 4: Run reel-specific analysis
+    prompt = f"""You are an AI tool analyst writing a concise report for content creators about a tool promoted in an Instagram reel. Follow these rules EXACTLY.
+
+=== RULES ===
+
+1. Say what the thing IS in the first sentence: an app, a gallery, a prompt pack, a repo, a plugin, an add-on. Never call a gallery a "generator."
+2. NEVER invent steps. Don't describe a sign-up, trial, or payment unless the official page shows it. Otherwise write "not seen on the page."
+3. Mark every claim:
+   - CONFIRMED: You saw evidence on the official page or a credible third-party source
+   - REPORTED: A third party mentioned it but you can't independently verify
+   - CANNOT CONFIRM: Self-reported by the creator/tool, or no evidence found
+4. Treat the reel creator's own numbers (engagement, results they claim) as CANNOT CONFIRM.
+5. Scoring rubric (be STRICT — most tools score 3-6):
+   - 8-10: News or traction in the last 30 days, still rising, hook can't be copied in an hour. RARE.
+   - 5-7: Real interest but average, similar content already exists.
+   - 1-4: Old news, crowded format, or little evidence of demand.
+   Every score MUST cite a number or fact. No evidence = write "no evidence found" and don't inflate.
+6. Keep it short. Cut anything the reader can't act on.
+7. Don't repeat the reel's claims as findings — CHECK them against the official page.
+8. For setup steps, mark which times come from the source and which are YOUR estimates.
+9. List paid requirements (accounts, subscriptions, API keys) as their own step with cost.
+10. If lookalike sites or similarly-named tools exist, warn about them.
+
+=== INPUTS ===
+
+REEL CONTENT (from Instagram):
+Creator: {content.get('title', 'unknown')}
+URL: {reel_url}
+Caption/text:
+{_clean_text(reel_text[:3000])}
+
+{tool_page_section}
+
+=== OUTPUT ===
+
+Return ONLY valid JSON:
+{{
+  "is_reel_report": true,
+  "what_it_is": "One sentence: what this tool actually is (app, gallery, repo, plugin, etc.). Be precise.",
+  "tool_name": "{tool_info.get('tool_name', 'Unknown')}",
+  "tool_url": "{tool_url or 'unknown'}",
+  "reel_viewed": {{
+    "creator": "the creator handle from the reel",
+    "caption_summary": "2-3 key points from the caption",
+    "engagement": "likes, comments, shares if visible in the fetched data, or 'not available from meta tags'",
+    "on_screen": "what could be determined from the available content",
+    "not_seen": "be honest: video frames, audio, full comments section, etc."
+  }},
+  "setup_steps": [
+    {{
+      "step_num": 0,
+      "what_to_do": "prerequisite step if needed",
+      "time_estimate": "5 min",
+      "time_source": "my estimate",
+      "cost": "$0 or $X/mo or null"
+    }}
+  ],
+  "total_time": {{
+    "from_nothing": "X min — if starting with nothing",
+    "if_ready": "Y min — if prerequisites are met"
+  }},
+  "risks": "What the install edits, downloads, or asks for. Say if you didn't audit the code. null if no risks seen.",
+  "tryability": {{
+    "free_tier": "Free / Freemium ($X/mo for more) / Paid ($X) — based on official page, NOT the reel",
+    "developer_score": "X/10",
+    "non_coder_score": "X/10",
+    "time_to_first_result": "estimate with reasoning"
+  }},
+  "claim_check": {{
+    "confirmed": [
+      {{"claim": "what was confirmed", "source": "where you saw evidence"}}
+    ],
+    "cannot_confirm": [
+      {{"claim": "what can't be confirmed", "reason": "why — self-reported / no evidence / etc."}}
+    ]
+  }},
+  "scorecard": [
+    {{"metric": "Trend fit", "score": "X/10", "why": "specific reason citing evidence"}},
+    {{"metric": "Uniqueness", "score": "X/10", "why": "specific reason"}},
+    {{"metric": "Shareability", "score": "X/10", "why": "specific reason with numbers if available"}},
+    {{"metric": "Tryability", "score": "X/10", "why": "specific reason"}},
+    {{"metric": "Overall", "score": "X/10", "why": "weighted summary"}}
+  ],
+  "distinct_angle": "What is NOT in the reel that IS verifiable — the content creator's edge. Be specific.",
+  "reel_hooks": [
+    {{"name": "short name for the hook concept", "description": "Full hook description with on-screen text suggestion. Be creative and specific."}},
+    {{"name": "second hook", "description": "A different creative angle"}},
+    {{"name": "third hook", "description": "A third distinct angle"}}
+  ],
+  "sources": [
+    {{"title": "Source name", "url": "the URL"}}
+  ]
+}}"""
+
+    text = generate(client, prompt, prefer_model="gpt-4o")
 
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        return {"error": "Could not parse verification response", "raw": text}
+        result = _parse_json_response(text)
+        result["is_reel_report"] = True
+        if tool_page and tool_page.get("ok"):
+            result["_tool_page_fetched"] = True
+            result["_tool_page_url"] = tool_url
+        return result
+    except (json.JSONDecodeError, ValueError):
+        return {"error": "Could not parse reel analysis", "raw": text}
 
 
 def analyze(content: dict) -> dict:
     """Full analysis pipeline: extract claims → verify → verdict."""
     client = get_client()
 
-    # Step 1: Extract claims
+    # Instagram reels get the reel-specific pipeline
+    if content.get("source_type") == "instagram":
+        return _analyze_reel(client, content)
+
+    # Everything else: standard pipeline
     claims_data = extract_claims(client, content)
 
     if claims_data.get("not_ai_tool"):
@@ -380,7 +570,6 @@ def analyze(content: dict) -> dict:
             "claims_data": claims_data,
         }
 
-    # Step 2: Verify claims and get verdict
     result = verify_claims(client, claims_data, content)
     result["claims_data"] = claims_data
 
