@@ -1,67 +1,66 @@
 """
-analyzer.py — Uses Google Gemini to extract claims, verify them,
+analyzer.py — Uses OpenAI GPT to extract claims, verify them,
 score tryability, and produce a content verdict.
 """
 
 import os
 import json
 import time
-from google import genai
-from google.genai import types
+from openai import OpenAI
 
-MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-]
+MODELS = ["gpt-4o-mini", "gpt-4o"]
 
 
 def get_client():
-    """Initialize and return the Gemini client."""
-    api_key = os.environ.get("GEMINI_API_KEY")
+    """Initialize and return the OpenAI client."""
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "GEMINI_API_KEY not set. Get one free at https://aistudio.google.com/apikey\n"
-            "Then run: export GEMINI_API_KEY='your-key-here'"
+            "OPENAI_API_KEY not set.\n"
+            "Get one at https://platform.openai.com/api-keys"
         )
-    return genai.Client(api_key=api_key)
+    return OpenAI(api_key=api_key)
 
 
 def generate(client, prompt: str, use_search: bool = False) -> str:
-    """Try multiple models with retries. use_search enables Google Search grounding."""
+    """Try multiple models with retries."""
     last_error = None
-    config = None
-    if use_search:
-        config = types.GenerateContentConfig(
-            tools=[types.Tool(google_search=types.GoogleSearch())]
-        )
     for model in MODELS:
         for attempt in range(3):
             try:
-                response = client.models.generate_content(
-                    model=model, contents=prompt, config=config
-                )
-                return response.text.strip()
+                if use_search:
+                    response = client.responses.create(
+                        model=model,
+                        tools=[{"type": "web_search_preview"}],
+                        input=prompt,
+                    )
+                    return response.output_text.strip()
+                else:
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.3,
+                    )
+                    return response.choices[0].message.content.strip()
             except Exception as e:
                 last_error = e
                 err = str(e)
-                if "503" in err or "UNAVAILABLE" in err:
-                    time.sleep(2 ** attempt)
-                    continue
-                if "429" in err or "RESOURCE_EXHAUSTED" in err:
+                if "429" in err or "rate_limit" in err.lower():
                     time.sleep(5 * (attempt + 1))
                     continue
-                if "404" in err or "NOT_FOUND" in err or "not found" in err.lower():
+                if "503" in err or "overloaded" in err.lower():
+                    time.sleep(2 ** attempt)
+                    continue
+                if "404" in err or "model_not_found" in err.lower():
                     break
-                if "400" in err or "INVALID" in err or "API key" in err.lower():
+                if "invalid_api_key" in err.lower() or "authentication" in err.lower():
                     raise RuntimeError(
-                        f"Gemini API error: {err}\n"
-                        "Check that your API key is valid at https://aistudio.google.com/apikey"
+                        f"OpenAI API error: {err}\n"
+                        "Check that your API key is valid at https://platform.openai.com/api-keys"
                     )
                 break
     raise RuntimeError(
-        f"All Gemini models failed. Last error: {last_error}\n"
+        f"All models failed. Last error: {last_error}\n"
         "Try again in a few minutes, or check your API key."
     )
 
@@ -168,6 +167,8 @@ def verify_claims(client, claims_data: dict, content: dict) -> dict:
 
     prompt = f"""You are a rigorous AI tool reviewer. Given the extracted claims about an AI tool, verify each one and assess how tryable this tool actually is.
 
+Use your web search capability to look up current information about the tools and models mentioned. AI moves fast — verify model names, versions, pricing, and features against real-time web data rather than relying only on your training data.
+
 EXTRACTED CLAIMS:
 {claims_json}
 
@@ -175,10 +176,8 @@ SOURCE CONTENT (for reference):
 {source_text}
 {pricing_info}
 
-IMPORTANT: Your training data has a cutoff date. AI moves fast — new models, tools, and versions launch constantly. If a claim references a model name, version, or tool you don't recognize, do NOT assume it's fake. Mark it "partially_true" with evidence noting you cannot verify it due to your knowledge cutoff, rather than "exaggerated." Only mark something "exaggerated" when you have positive evidence it's misleading, not just because you haven't heard of it.
-
 TASK — For each claim, assess:
-1. **Verdict**: "confirmed" (evidence supports it), "partially_true" (some truth but overstated, or cannot fully verify), or "exaggerated" (you have positive evidence it's misleading)
+1. **Verdict**: "confirmed" (evidence supports it), "partially_true" (some truth but overstated), or "exaggerated" (you have positive evidence it's misleading)
 2. **Evidence**: Brief explanation of why you gave that verdict
 3. **Red flags**: Any issues (requires paid API, complex setup, limited scope, etc.)
 

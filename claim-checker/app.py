@@ -54,9 +54,9 @@ st.markdown("""
 def get_api_key():
     """Check for API key in Streamlit secrets, then env, then sidebar input."""
     try:
-        return st.secrets["GEMINI_API_KEY"]
+        return st.secrets["OPENAI_API_KEY"]
     except (KeyError, FileNotFoundError):
-        return os.environ.get("GEMINI_API_KEY", "")
+        return os.environ.get("OPENAI_API_KEY", "")
 
 stored_key = get_api_key()
 
@@ -67,19 +67,19 @@ with st.sidebar:
         st.success("API key configured")
     else:
         api_key = st.text_input(
-            "Gemini API Key",
+            "OpenAI API Key",
             type="password",
-            help="Get a free key at https://aistudio.google.com/apikey",
+            help="Get a key at https://platform.openai.com/api-keys",
         )
         st.markdown(
-            "[Get a free API key →](https://aistudio.google.com/apikey)",
+            "[Get an API key →](https://platform.openai.com/api-keys)",
         )
     st.divider()
     st.markdown("**How it works**")
     st.markdown(
         "1. Paste a URL (GitHub repo, landing page, or Instagram reel)\n"
         "2. The tool fetches the content\n"
-        "3. Gemini extracts and verifies claims\n"
+        "3. GPT extracts and verifies claims\n"
         "4. You get a verdict with a content angle"
     )
 
@@ -106,10 +106,10 @@ if url and ("instagram.com" in url.lower()):
 
 if check_btn and url:
     if not api_key:
-        st.error("Please enter your Gemini API key in the sidebar.")
+        st.error("Please enter your OpenAI API key in the sidebar.")
         st.stop()
 
-    os.environ["GEMINI_API_KEY"] = api_key
+    os.environ["OPENAI_API_KEY"] = api_key
 
     with st.status("Analyzing...", expanded=True) as status:
         # Step 1: Fetch
@@ -153,7 +153,7 @@ if check_btn and url:
             st.stop()
         except Exception as e:
             status.update(label="Analysis failed", state="error")
-            st.error(f"Gemini API error: {e}")
+            st.error(f"API error: {e}")
             st.stop()
         status.update(label="Analysis complete", state="complete")
 
