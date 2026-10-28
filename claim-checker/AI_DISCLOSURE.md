@@ -1,27 +1,45 @@
 # AI Usage Disclosure — Litmus: Test the Promise
 
-## AI Tools Used in Building This Project
+## AI Used to Build This Project
 
-**Claude (Anthropic) — Claude Code** served as a development partner. Claude helped design the 9-step pipeline architecture, wrote initial drafts of all Python modules which I reviewed and iterated on, identified and fixed bugs (setup time parsing, claim extraction, security issues), and assisted with prompt engineering. Key design decisions — like having code compute verdicts instead of the model — emerged from collaborative debugging sessions. Claude also built the MCP server integration and helped write documentation.
+**Claude (chat + code)** was my development partner. Claude helped design the 9-step pipeline architecture, wrote initial code drafts which I reviewed and iterated on across multiple sessions, identified and fixed bugs (setup time parsing showing 526 min instead of 18 min, overly generic claim extraction), and built the MCP server integration.
 
-**OpenAI GPT-4o (Paid API)** is the LLM backbone inside the tool itself. It classifies tools, plans search queries, extracts structured facts with quotes, writes evidence-linked reports, self-critiques, and generates content hooks. It uses both the Chat Completions API (JSON mode) and the Responses API (web_search tool). Critically, GPT-4o does not decide verdicts — it returns evidence IDs, and code derives the final judgment.
+**GPT-4o API** is used inside the product itself, not for building it.
 
-**Streamlit** hosts the web app at ideahypeanalyser.streamlit.app.
+## How AI Is Used Inside the Product
+
+GPT-4o powers the pipeline at runtime:
+- **Extraction** — Classifies tools, plans search queries, pulls structured facts with quotes
+- **Search** — Uses the Responses API with web_search to find independent sources on Reddit, HN, YouTube, LinkedIn
+- **Writing** — Generates the scored report and reel hooks from verified evidence
+- **Self-critique** — A separate call reviews the report against raw evidence
+
+What GPT-4o does NOT do: decide verdicts, pick scores, or confirm its own claims. Code handles all of that.
+
+## My Decisions
+
+- **Problem selection**: Chose to automate the tool verification step of my content workflow, based on the bottleneck I described in my initial screening
+- **Instagram edge case solution**: When reels can't be auto-fetched, take the caption as input instead. Designed the fallback flow (detect Instagram URL → prompt for caption → process)
+- **MCP as a second delivery mode**: Proposed running the pipeline as an MCP inside Claude, so Claude can use its own connectors to fetch Instagram data, bypassing the caption limitation entirely
+- **Real web search over hardcoded sources**: Decided the pipeline should actually search Google/Reddit/HN/YouTube/LinkedIn live, not check against a fixed list of sources
+- **Code-computed verdicts**: Decided the model should return evidence IDs and code should derive verdicts — not let the model judge its own claims
+- **Independent source verification**: Each claim is checked against sources from different domains. Same-domain sources don't count as independent confirmation
+- **Quote-level validation**: Every fact must include a quote that actually appears on the source page — no paraphrasing accepted
+- **Per-feature claim extraction**: Instructed the prompt to extract each specific capability claim separately instead of summarizing them into one generic claim
+- **Multi-tool and multi-feature scoping**: Identified these as known limitations and scoped what the pipeline can realistically verify in one pass
+- **All testing and bug catching**: Tested every output against real URLs, caught the 526 min setup time bug and the generic claims issue by reading the output myself
+
+## AI's Contribution
+
+- Code drafting from my specifications
+- Prompt engineering for each pipeline step
+- Bug fixes after I identified the issues
+- Documentation drafts which I reviewed and edited
 
 ## How I Verified AI-Generated Code
 
-1. **Read every function** Claude generated and understood the flow before running it. Made changes where logic didn't match my intent.
-2. **Tested with real URLs** — tested against tools like Prompt Motion, gstack, and Knowledge Work Plugins. Compared output against manual research.
-3. **Cross-checked verdicts** — verified GPT-4o's claim judgments against what I could confirm manually (e.g., checking if a "free" tool actually requires paid API keys).
-4. **Iterative improvement** — multiple rounds of testing, feedback, and rewriting. The 9-step pipeline replaced an earlier single-pass approach that was unreliable.
-5. **Found and fixed bugs** — caught the setup time parsing bug (showing 526 min instead of 18 min) and the overly generic claim extraction, then worked with Claude to fix both.
-
-## What I Understand and Can Explain
-
-- The full 9-step pipeline and why each step exists
-- Why code computes verdicts instead of the model (prevents self-confirmation bias)
-- How domain-based independence checking works for source verification
-- The Instagram edge case flow (URL detection, caption paste, pending_reel state)
-- The multi-tool caption limitation and why deep per-feature verification is hard
-- How the MCP server exposes the same pipeline to Claude Desktop
-- All security measures: SSRF blocking, XSS escaping, key isolation, prompt injection fencing
+- Read every function and understood the flow before running it
+- Tested with real URLs (Prompt Motion, gstack, Knowledge Work Plugins) and compared against manual research
+- Cross-checked GPT-4o's claim verdicts against what I could verify manually
+- Multiple rounds of testing, feedback, and rewriting — the 9-step pipeline replaced an earlier single-pass approach that was unreliable
+- Caught specific bugs myself (526 min setup time, generic claims) and worked with Claude to fix them

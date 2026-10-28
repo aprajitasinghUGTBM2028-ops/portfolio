@@ -2,21 +2,25 @@
 
 ## The Problem
 
-Every week, Instagram creators discover dozens of new AI tools through reels. Each comes with bold claims — "completely free," "no code needed," "replaces your entire workflow." Manually verifying these takes 30-60 minutes per tool: checking the site, searching Reddit, reading GitHub, comparing alternatives. Most creators skip this and repeat the marketing pitch. Their audiences deserve better.
+During my initial screening, I described my content workflow: I use AI agents to surface trending tools, pick the most promising ones, then manually research each — checking the site, reading Reddit threads, comparing alternatives — before deciding whether to cover it. That manual verification takes 30-60 minutes per tool and is the bottleneck. Litmus automates it.
 
 ## What Litmus Does
 
-Litmus takes a tool's URL (or an Instagram caption) and runs a 9-step verification pipeline. It fetches the tool's page, extracts specific claims, searches Reddit, Hacker News, YouTube, and LinkedIn for independent evidence, then produces a scored report with a verdict. The entire analysis takes about 60 seconds.
+Paste a tool's URL (or an Instagram reel caption) and get a scored, evidence-linked report in about 60 seconds. It tells you: Can you actually use this tool today? How long does setup take? What claims are confirmed by independent sources vs unverified? Should you cover it, skip it, or cover the gap?
 
-The output includes: a tryability assessment (can you actually use it today?), setup steps with time estimates, a claims table showing what's confirmed vs unconfirmed, content hooks for reels, and a clear verdict (Cover It / Skip It / Cover the Gap).
+## Architecture — The 9-Step Pipeline
 
-## How AI Is Used — And Where It Isn't
+1. **Fetch** — Scrapes the tool's website, extracts text, follows key sub-pages
+2. **Classify & Plan** — GPT-4o identifies the tool type and generates targeted search queries
+3. **Search** — GPT-4o's web_search tool checks Reddit, Hacker News, YouTube, LinkedIn for independent mentions
+4. **Extract** — Pulls structured facts with exact quotes and source URLs from every page
+5. **Validate** — Code (not the model) verifies: Does the quote actually appear on that page? Is the source domain different from the tool's own domain? Only independent, quote-verified facts survive.
+6. **Gaps** — Identifies what's still unconfirmed and runs a second targeted search
+7. **Report** — GPT-4o writes a scored report, but scores are rule-based: Browse and Create start at 5/5, deducting for paywalls, logins, code requirements. The model doesn't pick the numbers.
+8. **Critique** — A separate GPT-4o call reviews the report against raw evidence, flags anything unsupported
+9. **Hooks** — Generates reel-ready content angles from verified evidence
 
-The pipeline uses GPT-4o for extraction (pulling claims from pages), search (finding independent sources), and writing (the report). But the critical decisions are made by code, not the model:
-
-- **Verdicts are code-computed.** The model returns evidence IDs. Code checks whether each source's domain matches the tool's domain. Only sources from different domains count as independent. This prevents the model from marking its own guesses as "confirmed."
-- **Quotes are verified against page text.** Every fact must include a quote that actually appears on the source page. If the quote isn't found, the fact is rejected.
-- **Scores use rules, not opinions.** Browse and Create scores start at 5/5 and deduct points based on access flags (needs account, needs payment, needs code, large download). The model doesn't pick the numbers.
+**Key design decision:** The model never decides verdicts. It returns evidence IDs. Code checks domain independence and quote presence. This prevents the model from confirming its own guesses.
 
 ## How It Can Be Used
 
@@ -25,14 +29,10 @@ The pipeline uses GPT-4o for extraction (pulling claims from pages), search (fin
 
 ## Known Limitations
 
-- **Instagram reels can't be auto-fetched** — the app detects Instagram URLs and asks the user to paste the caption manually.
-- **Multi-tool captions** — when a caption lists many tools, the app can identify them but can't deeply verify each one's specific feature claims in a single pass.
-- **Multi-feature verification depth** — if a tool claims 11 different capabilities, the pipeline verifies the tool exists and is open source, but may not confirm each individual feature.
-- **Run-to-run variance** — web search results differ between runs, so scores can shift slightly.
-- **Login-walled pages** — can't analyze content behind authentication.
+- **Multi-tool captions** — When a reel caption lists multiple tools, the pipeline can't deeply verify each one in a single pass.
+- **Instagram reels can't be auto-fetched** — The app detects Instagram URLs and asks the user to paste the caption manually.
+- **Multi-feature verification depth** — If a tool claims 11 capabilities, the pipeline confirms the tool exists but may not verify each individual feature claim.
 
-## What I'd Add With More Time
+## If I Had One More Day
 
-- Browser automation to actually try signing up and test the tool
-- Persistent history so users can compare analyses over time
-- Deeper sub-page crawling to verify individual feature claims
+I'd focus on personalization. Right now, within the time constraint, Litmus gives a standard shareable output. With more time, I'd connect Instagram via MCP to fetch reels frame-by-frame or through transcripts, then feed that structured data through the Litmus MCP so Claude has full context. The output would speak my voice instead of being generic — it would actually understand how I evaluate tools, what I prioritize, and how I frame things for my audience.
