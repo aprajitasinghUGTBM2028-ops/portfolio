@@ -99,6 +99,9 @@ def analyze_hype_claim(
             lines.append(f"- **[{tag}]** {h['text']}{prin}")
             if h.get("why_it_works"):
                 lines.append(f"  Why: {h['why_it_works']}")
+            if h.get("unverified_numbers"):
+                nums_str = ", ".join(f'"{n}"' for n in h["unverified_numbers"])
+                lines.append(f"  [!] {nums_str} not verified — illustrative number for virality")
         lines.append("")
 
     if rpt.get("bottom_line"):

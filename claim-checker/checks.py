@@ -308,6 +308,10 @@ def validate_hook(hook: dict, facts_by_id: dict) -> dict:
     allowed = set().union(*[numbers_in(f["text"]) for f in cited])
     stray = nums - allowed
     if stray:
+        if htype == "hype":
+            out["ok"] = True
+            out["unverified_numbers"] = sorted(stray)
+            return out
         out["reason"] = f"numbers not found in cited facts: {', '.join(sorted(stray))}"
         return out
     solid = set().union(*[numbers_in(f["text"]) for f in cited

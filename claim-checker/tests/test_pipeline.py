@@ -84,7 +84,7 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     texts = [h["text"] for h in r["report"]["hooks"]]
     assert "I copied one prompt from this free site and had a motion graphic ready for my reel" in texts
     assert all(h.get("type") in ("hype", "gap") for h in r["report"]["hooks"])
-    assert len(r["report"]["hooks_rejected"]) == 2            # invented number + question
+    assert len(r["report"]["hooks_rejected"]) == 2            # gap hook with invented number + question hook
     assert r["claims"][1]["verdict"] == "UNVERIFIABLE"        # popularity claim with no independent source
     assert r["scores"]["create"] == 3
     assert "needs a paid service" in r["scores"]["create_reasons"]
@@ -206,3 +206,22 @@ def test_cross_verify_upgrades_corroborated():
     assert facts["F2"]["status"] == "CORROBORATED"
     assert facts["F2"]["corroborated_by"] == "F1"
     assert facts["F3"]["status"] == "UNCHECKED"  # unrelated, stays UNCHECKED
+
+
+def test_hype_hook_allows_unverified_numbers():
+    """Hype hooks with illustrative numbers pass but are flagged; gap hooks are rejected."""
+    import checks as Ch
+    facts = {
+        "F1": {"id": "F1", "text": "A free AI motion gallery",
+               "status": "SITE_SAYS", "origin": "official"},
+    }
+    hype_hook = {"text": "50k creators are sleeping on this free AI motion tool",
+                 "type": "hype", "principle": "social_proof", "fact_ids": ["F1"]}
+    gap_hook = {"text": "I spent 50 dollars testing this so-called free tool",
+                "type": "gap", "principle": "contrarian_take", "fact_ids": ["F1"]}
+    h_result = Ch.validate_hook(hype_hook, facts)
+    g_result = Ch.validate_hook(gap_hook, facts)
+    assert h_result["ok"] is True
+    assert h_result.get("unverified_numbers"), "hype hook should flag unverified numbers"
+    assert "50k" in h_result["unverified_numbers"]
+    assert g_result["ok"] is False, "gap hooks must not use invented numbers"

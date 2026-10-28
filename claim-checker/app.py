@@ -180,6 +180,9 @@ def _format_result(r):
             lines.append(f"- {C.esc(h['text'])}{prin}")
             if h.get("why_it_works"):
                 lines.append(f"  Why it works: {C.esc(h['why_it_works'])}")
+            if h.get("unverified_numbers"):
+                nums_str = ", ".join(f'"{n}"' for n in h["unverified_numbers"])
+                lines.append(f"  [!] {nums_str} not verified by our pipeline — illustrative number for virality")
         lines.append("")
     if gap:
         lines.append("**Gap hooks** (reveal the truth)")
@@ -306,6 +309,22 @@ with st.sidebar:
                 st.session_state["_rerender"] = True
                 st.rerun()
 
+        if st.session_state.last_result:
+            r = st.session_state.last_result
+            already_saved = any(s.get("url") == r.get("url") for s in st.session_state.saved_analyses)
+            if not already_saved:
+                if st.button("Save last analysis", key="sidebar_save"):
+                    st.session_state.saved_analyses.append({
+                        "name": r.get("name", "Unknown"),
+                        "verdict": r["verdict"],
+                        "content": _format_result(r),
+                        "claims": r["claims"],
+                        "facts": r["facts"],
+                        "url": r.get("url", "")})
+                    st.rerun()
+            else:
+                st.caption("Last analysis saved.")
+
     # Saved analyses
     st.markdown("---")
     st.markdown("### Saved analyses")
@@ -316,10 +335,30 @@ with st.sidebar:
             st.session_state["_view_saved"] = i
             st.rerun()
 
-    # MCP integration note
+    # MCP integration
     st.markdown("---")
-    st.caption("This pipeline also works as an MCP server for Claude Desktop. "
-               "See mcp\\_server.py in the repo.")
+    st.markdown("### Use in Claude Desktop")
+    with st.expander("MCP setup (copy-paste)"):
+        st.markdown("**1. Install dependencies**")
+        st.code("pip install openai requests beautifulsoup4 mcp", language="bash")
+        st.markdown("**2. Clone the repo**")
+        st.code("git clone https://github.com/aprajitasinghugtbm2028-ops/portfolio.git",
+                language="bash")
+        st.markdown("**3. Add to Claude Desktop config**")
+        st.markdown("Open `~/.claude/claude_desktop_config.json` and add:")
+        st.code('''{
+  "mcpServers": {
+    "hype-checker": {
+      "command": "python",
+      "args": ["/path/to/portfolio/claim-checker/mcp_server.py"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-key-here"
+      }
+    }
+  }
+}''', language="json")
+        st.caption("Replace `/path/to/` with wherever you cloned the repo. "
+                   "Uses the same OpenAI key as this app.")
 
 # ── Re-render with new profile (no new API call) ───────────────────
 
@@ -354,6 +393,8 @@ if st.session_state.get("_rerender") and st.session_state.last_result:
 if st.session_state.get("_view_saved") is not None:
     idx = st.session_state.pop("_view_saved")
     saved = st.session_state.saved_analyses[idx]
+    if st.button("Back to chat"):
+        st.rerun()
     st.markdown(f"### Saved: {C.esc(saved['name'])}")
     st.markdown(saved["content"])
     with st.expander(f"Claims ({len(saved['claims'])})"):
@@ -517,17 +558,6 @@ if prompt := st.chat_input("Paste a URL, or ask a follow-up about the last analy
 
         with st.expander("Evidence detail"):
             st.markdown(evidence_text)
-
-        # Save button
-        if st.button("Save this analysis", key="save_btn"):
-            st.session_state.saved_analyses.append({
-                "name": r.get("name", "Unknown"),
-                "verdict": r["verdict"],
-                "content": main_text,
-                "claims": r["claims"],
-                "facts": r["facts"],
-                "url": r["url"]})
-            st.toast(f"Saved: {r.get('name', 'analysis')}")
 
         # Save to chat history
         st.session_state.messages.append({

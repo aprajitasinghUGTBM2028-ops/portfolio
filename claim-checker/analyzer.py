@@ -215,6 +215,10 @@ comments. First 0.5 seconds decide if they stay.
 Write EXACTLY 4 hooks in two categories:
 
 HYPE HOOKS (2): Ride the excitement. Make viewers want to try it NOW.
+Be BOLD and scroll-stopping. You CAN use illustrative round numbers to make
+the hook punchy (e.g. "50k creators are sleeping on this" or "under 2 minutes").
+Keep them in the same order of magnitude as reality — don't say "1 million" for
+a tool with 200 stars. Our pipeline flags these as unverified so the creator knows.
 Use these Instagram content psychology principles:
 - "curiosity_gap": Open a loop the viewer MUST close ("I found a site that...")
 - "transformation": Show a before/after in one sentence ("One line of text became...")
@@ -245,7 +249,9 @@ Also provide:
 "distinct_angle": One angle the tool's own pitch would never give you.
   Make it specific and verifiable.
 
-Use ONLY these facts (cite fact ids). Self-reported numbers need "the site says" prefix.
+Cite fact ids. Self-reported numbers need "the site says" prefix.
+HYPE hooks may use illustrative round numbers for punch — they will be flagged
+as unverified. GAP hooks must stick strictly to verified facts only.
 Facts: {facts}
 Scores: {scores}
 
@@ -662,7 +668,7 @@ def stage_report(llm, facts, scores, claims, user_context=None):
 
     return {"summary": prose["summary"], "bottom_line": prose["bottom_line"],
             "quick_start": [str(s)[:200] for s in (analysis.get("quick_start") or [])][:6],
-            "hooks": C.pick_hooks(hooks, 3), "hooks_rejected": [h for h in hooks if not h["ok"]],
+            "hooks": C.pick_hooks(hooks, 4), "hooks_rejected": [h for h in hooks if not h["ok"]],
             "distinct_angle": angle if angle_ok else None,
             "virality_notes": str(analysis.get("virality_notes", ""))[:300],
             "uniqueness": str(analysis.get("uniqueness", ""))[:300],
