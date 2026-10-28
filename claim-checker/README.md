@@ -1,4 +1,4 @@
-# AI Hype Claim Checker
+# Litmus — Test the Promise
 
 **Paste an AI tool's URL. Get a verdict: what's real, what's hype, and whether it's worth covering.**
 

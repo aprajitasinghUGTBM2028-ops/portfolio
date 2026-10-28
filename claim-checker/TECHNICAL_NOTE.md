@@ -1,4 +1,4 @@
-# Technical Note — AI Hype Claim Checker
+# Technical Note — Litmus
 
 ## Problem
 
