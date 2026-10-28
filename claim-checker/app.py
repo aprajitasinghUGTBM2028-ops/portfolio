@@ -50,6 +50,18 @@ def _parse_input(text):
     return "", text, ""
 
 
+def _looks_like_caption(text):
+    """Detect if input looks like a pasted social-media caption rather than a question."""
+    t = text.strip()
+    if len(t) < 80:
+        return False
+    if any(c in t for c in ("#", "\n")):
+        return True
+    if len(t) > 200:
+        return True
+    return False
+
+
 def _format_result(r):
     """Format analysis result as flowing markdown matching the playbook standard."""
     sc = r["scores"]
@@ -370,7 +382,7 @@ if not _key:
     st.stop()
 
 st.title("Litmus")
-st.caption("Test the Promise — paste a tool URL and I'll check what's real.")
+st.caption("Test the Promise — paste a URL, GitHub link, or Instagram caption.")
 
 # ── Session state init ──────────────────────────────────────────────
 
@@ -543,7 +555,7 @@ if st.session_state.messages and st.session_state.last_result:
 
 # ── Chat input ───────────────────────────────────────────────────────
 
-if prompt := st.chat_input("Paste a URL to test, or ask about the last check"):
+if prompt := st.chat_input("Paste a URL, GitHub link, or Instagram caption"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -584,6 +596,40 @@ if prompt := st.chat_input("Paste a URL to test, or ask about the last check"):
             st.session_state.messages.append({"role": "assistant", "content": resp})
         st.stop()
 
+    cap_used = False
+    if not url and _looks_like_caption(prompt):
+        if not _check_cap():
+            resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
+            st.session_state.messages.append({"role": "assistant", "content": resp})
+            with st.chat_message("assistant"):
+                st.markdown(resp)
+            st.stop()
+        cap_used = True
+        with st.chat_message("assistant"):
+            with st.status("Identifying the tool from the caption...", expanded=True) as status_box:
+                try:
+                    _key = _api_key()
+                    tool_info = analyzer.identify_tool_from_caption(
+                        analyzer.OpenAILLM(_key), prompt,
+                        progress=lambda s: status_box.write(s))
+                except Exception as e:
+                    tool_info = None
+                    status_box.write(f"Error: {C.redact_secrets(str(e))}")
+            if tool_info and tool_info.get("tool_url"):
+                url = tool_info["tool_url"]
+                caption = prompt
+                tool_name = tool_info.get("tool_name", "")
+                st.markdown(f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}")
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}"})
+            else:
+                resp = ("I couldn't identify a specific tool from that caption. "
+                        "Try pasting the tool's website URL or GitHub link instead.")
+                st.session_state.messages.append({"role": "assistant", "content": resp})
+                st.markdown(resp)
+                st.stop()
+
     if not url:
         resp = "Paste a URL to check (e.g. `prompt-motion.com` or `github.com/org/repo`)."
         st.session_state.messages.append({"role": "assistant", "content": resp})
@@ -591,7 +637,7 @@ if prompt := st.chat_input("Paste a URL to test, or ask about the last check"):
             st.markdown(resp)
         st.stop()
 
-    if not _check_cap():
+    if not cap_used and not _check_cap():
         resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
         st.session_state.messages.append({"role": "assistant", "content": resp})
         with st.chat_message("assistant"):

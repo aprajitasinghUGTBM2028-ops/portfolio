@@ -272,6 +272,15 @@ Search the web to find:
 3. Any reviews or discussions about this tool
 Find the actual tool website. Do not return Instagram links."""
 
+P_CAPTION_IDENTIFY = """A social-media caption is promoting an AI tool or product.
+Caption:
+{caption_text}
+Search the web to find:
+1. What AI tool or product is being promoted?
+2. The tool's official website URL
+3. Any reviews or discussions about this tool
+Find the actual tool website."""
+
 P_REEL_EXTRACT = """From this search about an Instagram reel, extract the AI tool being promoted.
 Return {{"tool_name": name or null, "tool_url": official website URL (https://...) or null,
 "reel_claims": [specific claims the reel makes]}}.
@@ -701,6 +710,22 @@ def _identify_reel_tool(llm, reel_url, caption, on_screen, progress=lambda s: No
         reel_text = "(no caption provided — search for the reel URL itself)"
 
     res = llm.search(P_REEL_IDENTIFY.format(reel_url=reel_url, reel_text=reel_text))
+    if not res.get("text") or res.get("error"):
+        return None
+    try:
+        info = llm.json(SYS_RULES, P_REEL_EXTRACT.format(note=C.fence_text(res["text"])))
+    except Exception:
+        return None
+    tool_url = info.get("tool_url")
+    if tool_url and isinstance(tool_url, str) and tool_url.startswith("http"):
+        return info
+    return None
+
+
+def identify_tool_from_caption(llm, caption_text, progress=lambda s: None):
+    """Use web search to find what tool a pasted caption is promoting."""
+    progress("Identifying the tool from the caption...")
+    res = llm.search(P_CAPTION_IDENTIFY.format(caption_text=caption_text[:2000]))
     if not res.get("text") or res.get("error"):
         return None
     try:
