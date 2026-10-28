@@ -586,14 +586,27 @@ if st.session_state.messages and st.session_state.last_result:
 
 if st.session_state.pending_caption_tools:
     _tools = st.session_state.pending_caption_tools
-    st.markdown("**This caption mentions multiple tools. Pick one to check:**")
+    _valid_tools = [t for t in _tools if t.get("url")]
+    st.markdown(f"**This caption mentions {len(_tools)} tools.**")
+
+    # "Analyze all" button — runs the full pipeline on every tool with a URL
+    if _valid_tools and len(_valid_tools) >= 2:
+        if st.button(f"Analyze all {len(_valid_tools)} tools", type="primary"):
+            st.session_state.pending_caption_tools = None
+            st.session_state._batch_tools = _valid_tools
+            st.rerun()
+
+    # Individual tool buttons
+    st.markdown("Or pick one:")
     cols = st.columns(min(len(_tools), 3))
     for i, t in enumerate(_tools):
         with cols[i % min(len(_tools), 3)]:
             label = t["name"]
             if t.get("url"):
                 label += f" ({C.esc(t['url'].split('//')[-1][:30])})"
-            if st.button(label, key=f"pick_tool_{i}", type="primary" if i == 0 else "secondary"):
+            else:
+                label += " (no URL)"
+            if st.button(label, key=f"pick_tool_{i}", disabled=not t.get("url")):
                 st.session_state.pending_caption_tools = None
                 url_to_check = t.get("url") or ""
                 if url_to_check:
@@ -603,10 +616,75 @@ if st.session_state.pending_caption_tools:
                     st.session_state._pick_url = url_to_check
                     st.session_state._pick_name = t["name"]
                     st.rerun()
-                else:
-                    resp = f"No URL found for **{C.esc(t['name'])}**. Try pasting its website URL directly."
-                    st.session_state.messages.append({"role": "assistant", "content": resp})
-                    st.rerun()
+    st.stop()
+
+
+# ── Batch analysis (analyze all tools from a caption) ────────────────
+
+_batch_tools = st.session_state.pop("_batch_tools", None)
+if _batch_tools:
+    _key = _api_key()
+    llm = analyzer.OpenAILLM(_key)
+    batch_results = []
+    total = len(_batch_tools)
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": f"Analyzing **{total} tools** from the caption. This will take a few minutes..."})
+    with st.chat_message("assistant"):
+        st.markdown(f"Analyzing **{total} tools** from the caption. This will take a few minutes...")
+        for idx, tool in enumerate(_batch_tools):
+            tool_name = tool["name"]
+            tool_url = tool["url"]
+            with st.status(f"[{idx+1}/{total}] Analyzing {tool_name}...", expanded=True) as status_box:
+                try:
+                    r = analyzer.analyze(tool_url, llm, progress=lambda s: status_box.write(s))
+                except Exception as e:
+                    r = {"state": "error", "message": str(e)}
+                status_box.update(label=f"[{idx+1}/{total}] {tool_name} — done", state="complete")
+
+            if r.get("state") == "error":
+                st.warning(f"**{C.esc(tool_name)}**: Could not analyze — {C.esc(r.get('message', 'unknown error'))}")
+                continue
+            if r.get("state") == "thin":
+                st.warning(f"**{C.esc(tool_name)}**: Not enough content on the page to analyze.")
+                continue
+
+            batch_results.append(r)
+            main_text = _format_result(r)
+
+            with st.expander(f"{C.esc(r['name'])} — {C.esc(r['verdict'])}", expanded=(idx == 0)):
+                st.markdown(main_text)
+                facts_by_id = {f["id"]: f for f in r["facts"]}
+                with st.expander(f"Claims ({len(r['claims'])})"):
+                    for cl in r["claims"]:
+                        ic = STATUS_ICON.get(cl["verdict"], "[?]")
+                        st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
+                with st.expander(f"Verified facts ({len(r['facts'])})"):
+                    for f in r["facts"]:
+                        ic = STATUS_ICON.get(f["status"], "[?]")
+                        st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}")
+
+        # Summary table at the end
+        if batch_results:
+            st.markdown("---")
+            st.markdown("### Summary")
+            st.markdown("| Tool | Verdict | Browse | Create | Independent |")
+            st.markdown("|---|---|---|---|---|")
+            for r in batch_results:
+                sc = r["scores"]
+                st.markdown(
+                    f"| {C.esc(r['name'])} | **{C.esc(r['verdict'])}** "
+                    f"| {sc['browse']}/5 | {sc['create']}/5 "
+                    f"| {sc.get('n_independent', 0)} |")
+
+            # Store the first result for follow-up questions
+            st.session_state.last_result = batch_results[0]
+
+            # Build combined message for chat history
+            combined = f"Analyzed **{len(batch_results)} tools** from caption.\n\n"
+            for r in batch_results:
+                combined += f"- **{C.esc(r['name'])}** — {C.esc(r['verdict'])}\n"
+            st.session_state.messages.append({"role": "assistant", "content": combined})
     st.stop()
 
 
