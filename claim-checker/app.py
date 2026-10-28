@@ -93,13 +93,17 @@ def _format_result(r):
     # Setup steps with time estimates — sum from steps, not LLM header
     steps = rpt.get("setup_steps") or []
     if steps:
-        step_total = sum(
-            int("".join(c for c in str(s.get("time", "5")) if c.isdigit()) or "5")
-            for s in steps)
+        def _first_num(s):
+            import re
+            m = re.search(r"\d+", str(s))
+            return int(m.group()) if m else 5
+        step_total = sum(_first_num(s.get("time", "5")) for s in steps)
+        step_total = min(step_total, 120)
         lines.append(f"**Setup time:** ~{step_total} min estimated")
         for i, step in enumerate(steps, 1):
-            t = step.get("time", "")
-            lines.append(f"- Step {i}: {C.esc(step.get('step', ''))} ({C.esc(t)} min)")
+            t = str(step.get("time", "")).rstrip()
+            t_clean = t if "min" in t.lower() else f"{t} min"
+            lines.append(f"- Step {i}: {C.esc(step.get('step', ''))} ({C.esc(t_clean)})")
         lines.append("")
     else:
         sm = sc.get("setup_minutes")
