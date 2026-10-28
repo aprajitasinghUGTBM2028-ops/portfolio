@@ -19,6 +19,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 STATUSES = (
     "OBSERVED",
     "INDEPENDENT",
+    "CORROBORATED",
     "CONTRADICTED",
     "UNCHECKED",
     "SITE_SAYS",
@@ -244,10 +245,10 @@ def lookalike_domains(tool_url: str, candidates) -> list:
 def claim_verdict(claim: dict, facts_by_id: dict, supports, contradicts, search_ok: bool):
     sup = [i for i in (supports or []) if i in facts_by_id]
     con = [i for i in (contradicts or []) if i in facts_by_id]
-    con_ok = [i for i in con if facts_by_id[i]["status"] in ("INDEPENDENT", "OBSERVED")]
+    con_ok = [i for i in con if facts_by_id[i]["status"] in ("INDEPENDENT", "CORROBORATED", "OBSERVED")]
     if con_ok:
         return "CONTRADICTED", con_ok
-    for want in ("INDEPENDENT", "OBSERVED", "UNCHECKED"):
+    for want in ("INDEPENDENT", "CORROBORATED", "OBSERVED", "UNCHECKED"):
         ids = [i for i in sup if facts_by_id[i]["status"] == want]
         if ids:
             return want, ids
@@ -307,7 +308,7 @@ def validate_hook(hook: dict, facts_by_id: dict) -> dict:
         out["reason"] = f"numbers not found in cited facts: {', '.join(sorted(stray))}"
         return out
     solid = set().union(*[numbers_in(f["text"]) for f in cited
-                          if f["status"] in ("INDEPENDENT", "OBSERVED")] or [set()])
+                          if f["status"] in ("INDEPENDENT", "CORROBORATED", "OBSERVED")] or [set()])
     self_only = nums - solid
     if self_only and not any(p in text.lower() for p in SITE_PHRASES):
         out["reason"] = "uses a self-reported number without saying whose number it is"

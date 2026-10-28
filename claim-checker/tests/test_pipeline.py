@@ -179,3 +179,19 @@ def test_user_context_passed(monkeypatch):
     ctx = {"budget": "Free only", "experience": "Non-technical", "use_case": "Instagram Reels"}
     r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28), user_context=ctx)
     assert r["state"] == "ok"
+
+def test_cross_verify_upgrades_corroborated():
+    """UNCHECKED independent fact matching a SITE_SAYS fact gets upgraded to CORROBORATED."""
+    facts = {
+        "F1": {"id": "F1", "text": "Requires Muapi.ai API key for credits",
+               "status": "SITE_SAYS", "origin": "official"},
+        "F2": {"id": "F2", "text": "Users report needing paid credits from Muapi API",
+               "status": "UNCHECKED", "origin": "independent"},
+        "F3": {"id": "F3", "text": "Tutorial about cooking pasta at home",
+               "status": "UNCHECKED", "origin": "independent"},
+    }
+    upgraded = A._cross_verify(facts)
+    assert upgraded == 1
+    assert facts["F2"]["status"] == "CORROBORATED"
+    assert facts["F2"]["corroborated_by"] == "F1"
+    assert facts["F3"]["status"] == "UNCHECKED"  # unrelated, stays UNCHECKED

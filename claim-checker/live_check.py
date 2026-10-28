@@ -15,7 +15,7 @@ def checklist(r, name):
         return {"graceful error, no report": r["state"] in ("error", "thin")}
     if r["state"] != "ok":
         return {"report produced": False}
-    solid = [f for f in r["facts"] if f["status"] == "INDEPENDENT"]
+    solid = [f for f in r["facts"] if f["status"] in ("INDEPENDENT", "CORROBORATED")]
     ids = {f["id"] for f in r["facts"]}
     return {
         "scores within range": (1 <= r["scores"]["browse"] <= 5 and 1 <= r["scores"]["create"] <= 5

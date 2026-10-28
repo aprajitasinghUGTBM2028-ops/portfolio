@@ -545,6 +545,44 @@ def stage_investigate(llm, facts, access, doc, today, progress=lambda s: None):
     return {"investigated": investigated}
 
 
+_STOP = frozenset(
+    "a an the is are was were be been being have has had do does did will would "
+    "shall should can could may might must need dare to of in for on with at by "
+    "from as into through during before after above below between out off over "
+    "under again further then once here there when where why how all each every "
+    "both few more most other some such no nor not only own same so than too very "
+    "and but or if it its this that these those he she they them their his her "
+    "we you your our what which who whom".split())
+
+
+def _keywords(text):
+    words = set(C.norm(text).split()) - _STOP
+    return {w for w in words if len(w) >= 3}
+
+
+def _cross_verify(facts):
+    """Upgrade UNCHECKED independent facts corroborated by official/observed facts."""
+    official = [f for f in facts.values()
+                if f["status"] in ("SITE_SAYS", "OBSERVED") and f["origin"] != "independent"]
+    official_kw = {fid: _keywords(f["text"]) for fid, f in facts.items()
+                   if f["status"] in ("SITE_SAYS", "OBSERVED") and f["origin"] != "independent"}
+    upgraded = 0
+    for fid, f in facts.items():
+        if f["status"] != "UNCHECKED" or f["origin"] != "independent":
+            continue
+        kw = _keywords(f["text"])
+        if not kw:
+            continue
+        for off_id, off_kw in official_kw.items():
+            overlap = kw & off_kw
+            if len(overlap) >= 2:
+                f["status"] = "CORROBORATED"
+                f["corroborated_by"] = off_id
+                upgraded += 1
+                break
+    return upgraded
+
+
 def stage_claims(llm, facts, search_ok, origin):
     brief = [{"id": f["id"], "text": f["text"], "status": f["status"]} for f in facts.values()]
     out = llm.json(SYS_RULES, P_CLAIMS.format(facts=json.dumps(brief)))
@@ -558,9 +596,9 @@ def stage_claims(llm, facts, search_ok, origin):
 
 
 def compute_scores(access, facts, research, today):
-    ind = [f for f in facts.values() if f["status"] in ("INDEPENDENT", "UNCHECKED")
+    ind = [f for f in facts.values() if f["status"] in ("INDEPENDENT", "CORROBORATED", "UNCHECKED")
            and f["origin"] == "independent"]
-    confirmed_ind = [f for f in facts.values() if f["status"] == "INDEPENDENT"]
+    confirmed_ind = [f for f in facts.values() if f["status"] in ("INDEPENDENT", "CORROBORATED")]
     dated = [C.parse_date(f.get("date")) for f in facts.values() if f["origin"] == "independent"]
     fresh = sum(1 for d in dated if C.within_days(d, today, 30))
     b = C.browse_score(access.get("free_to_browse"), access.get("needs_account"))
@@ -702,6 +740,10 @@ def analyze(url, llm, caption="", on_screen="", today=None, progress=lambda s: N
 
     progress("Conditional investigation...")
     investigation = stage_investigate(llm, facts, fx["access"], doc, today, progress)
+
+    n_upgraded = _cross_verify(facts)
+    if n_upgraded:
+        progress(f"Cross-verified {n_upgraded} finding(s) against official facts")
 
     progress("Linking claims to evidence...")
     claims = stage_claims(llm, facts, research["search_ok"], doc["kind"])

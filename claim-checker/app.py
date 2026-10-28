@@ -7,7 +7,7 @@ import analyzer
 import checks as C
 
 DAILY_CAP = 40
-STATUS_ICON = {"INDEPENDENT": "[v]", "OBSERVED": "[v]", "CONTRADICTED": "[x]",
+STATUS_ICON = {"INDEPENDENT": "[v]", "CORROBORATED": "[v]", "OBSERVED": "[v]", "CONTRADICTED": "[x]",
                "SITE_SAYS": "[~]", "REEL_SAYS": "[~]", "UNCHECKED": "[?]", "UNVERIFIABLE": "[?]"}
 
 
