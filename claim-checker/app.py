@@ -104,15 +104,20 @@ def _format_result(r):
         lines.append("**Paid dependency:** No")
     lines.append("")
 
-    # Scores table
+    # Scores table — rule-based, not LLM-generated
     br = "; ".join(sc.get("browse_reasons", [])) or "no issues"
     cr = "; ".join(sc.get("create_reasons", [])) or "no issues"
-    lines.append("| Metric | Score | Why |")
+    n_conf = sc.get("n_confirmed_independent", 0)
+    n_total = sc.get("n_independent", 0)
+    ind_detail = f"{n_conf} verified, {n_total - n_conf} unverified" if n_total else "none found"
+    lines.append("**Scores** (computed from access flags, not LLM opinion)")
+    lines.append("")
+    lines.append("| Metric | Score | How it was computed |")
     lines.append("|---|---|---|")
-    lines.append(f"| Browse | {sc['browse']}/5 | {br} |")
-    lines.append(f"| Create | {sc['create']}/5 | {cr} |")
+    lines.append(f"| Browse | {sc['browse']}/5 | Starts at 5. {br} |")
+    lines.append(f"| Create | {sc['create']}/5 | Starts at 5. {cr} |")
     lines.append(f"| Crowdedness | {sc['crowded']} | {sc.get('crowded_reason', '')} |")
-    lines.append(f"| Independent sources | {sc['n_independent']} | — |")
+    lines.append(f"| Independent sources | {n_total} | {ind_detail} |")
     lines.append("")
 
     # How people are using it
@@ -143,7 +148,7 @@ def _format_result(r):
     # Virality scorecard
     vs = rpt.get("virality_scorecard") or []
     if vs:
-        lines.append("**Virality scorecard**")
+        lines.append("**Virality scorecard** (LLM estimate — treat as directional, not precise)")
         lines.append("| Dimension | Score | Why |")
         lines.append("|---|---|---|")
         for item in vs:
@@ -526,19 +531,43 @@ if prompt := st.chat_input("Paste a URL, or ask a follow-up about the last analy
         st.markdown(main_text)
 
         # Expandable detail sections
+        facts_by_id = {f["id"]: f for f in r["facts"]}
         with st.expander(f"Claims ({len(r['claims'])})"):
             for cl in r["claims"]:
                 ic = STATUS_ICON.get(cl["verdict"], "[?]")
                 st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
+                eids = cl.get("evidence_ids") or []
+                for eid in eids:
+                    ef = facts_by_id.get(eid)
+                    if ef:
+                        src = C.esc(ef.get("url", ""))
+                        st.caption(f"  {eid}: {C.esc(ef['text'])} [{ef['status']}] — {src}")
 
         with st.expander(f"Verified facts ({len(r['facts'])})"):
             for f in r["facts"]:
                 ic = STATUS_ICON.get(f["status"], "[?]")
-                st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}")
+                src = f" — {C.esc(f['url'])}" if f.get("url") else ""
+                corr = ""
+                if f.get("corroborated_by"):
+                    cf = facts_by_id.get(f["corroborated_by"])
+                    if cf:
+                        corr = f" (corroborated by {f['corroborated_by']}: {C.esc(cf['text'][:60])})"
+                st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}{corr}")
+                st.caption(f"  Source: {C.esc(f.get('url', 'unknown'))} | Origin: {f.get('origin', '?')}")
 
         evidence_lines = []
         if r.get("investigation", {}).get("investigated"):
-            evidence_lines.append(f"**Conditional branches run:** {', '.join(r['investigation']['investigated'])}")
+            inv_list = r["investigation"]["investigated"]
+            evidence_lines.append(f"**Conditional branches run:** {len(inv_list)}")
+            for branch in inv_list:
+                if branch.startswith("pricing:"):
+                    svc = branch.split(":", 1)[1]
+                    evidence_lines.append(f"- Pricing: {C.esc(svc)} — triggered because tool's own pages mention this service as a dependency")
+                elif branch.startswith("deps:"):
+                    fname = branch.split(":", 1)[1]
+                    evidence_lines.append(f"- Dependencies: parsed {C.esc(fname)} from repository (code, no LLM)")
+                else:
+                    evidence_lines.append(f"- {C.esc(branch)}")
         if r.get("dropped_facts"):
             evidence_lines.append(f"**Rejected facts (quote not on page):** {len(r['dropped_facts'])}")
         if r["research"].get("rejected"):

@@ -69,10 +69,15 @@ def analyze_hype_claim(
         rpt.get("summary", ""),
         "",
         f"**Verdict:** {r['verdict']} — {r['verdict_rule']}",
-        f"**Browse:** {sc['browse']}/5 | **Create:** {sc['create']}/5 | "
-        f"**Crowded:** {sc['crowded']}",
-        f"**Independent sources:** {sc['n_independent']} | "
-        f"**Paid dependency:** {'Yes' if sc.get('paid_dependency') else 'No'}",
+        "",
+        "Scores (rule-based, not LLM opinion):",
+        f"- Browse: {sc['browse']}/5 (starts at 5; {'; '.join(sc.get('browse_reasons', [])) or 'no deductions'})",
+        f"- Create: {sc['create']}/5 (starts at 5; {'; '.join(sc.get('create_reasons', [])) or 'no deductions'})",
+        f"- Crowded: {sc['crowded']} ({sc.get('crowded_reason', '')})",
+        f"- Independent sources: {sc['n_independent']} "
+        f"({sc.get('n_confirmed_independent', 0)} verified, "
+        f"{sc['n_independent'] - sc.get('n_confirmed_independent', 0)} unverified)",
+        f"- Paid dependency: {'Yes' if sc.get('paid_dependency') else 'No'}",
         "",
     ]
 

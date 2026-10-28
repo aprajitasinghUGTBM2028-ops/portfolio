@@ -466,7 +466,11 @@ def stage_research(llm, doc, name, what_it_is, facts, today, progress=lambda s: 
 
 
 def _detect_paid_services(facts):
-    """Detect which paid services are mentioned in facts."""
+    """Detect paid services from the tool's OWN pages and dependency files only.
+
+    Only scans official/api-origin facts so that a service merely mentioned
+    in an independent review or comparison does not trigger a pricing investigation.
+    """
     paid_map = {
         "claude": "Anthropic Claude", "anthropic": "Anthropic Claude",
         "gpt-4": "OpenAI GPT-4", "gpt4": "OpenAI GPT-4", "openai": "OpenAI",
@@ -474,7 +478,8 @@ def _detect_paid_services(facts):
         "stability": "Stability AI", "replicate": "Replicate",
         "gemini": "Google Gemini",
     }
-    all_text = " ".join(f["text"].lower() for f in facts.values())
+    own_facts = [f for f in facts.values() if f.get("origin") in ("official", "api")]
+    all_text = " ".join(f["text"].lower() for f in own_facts)
     seen, services = set(), []
     for keyword, name in paid_map.items():
         if keyword in all_text and name not in seen:

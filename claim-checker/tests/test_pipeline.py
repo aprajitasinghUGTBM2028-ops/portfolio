@@ -225,3 +225,18 @@ def test_hype_hook_allows_unverified_numbers():
     assert h_result.get("unverified_numbers"), "hype hook should flag unverified numbers"
     assert "50k" in h_result["unverified_numbers"]
     assert g_result["ok"] is False, "gap hooks must not use invented numbers"
+
+
+def test_detect_paid_services_ignores_independent():
+    """_detect_paid_services should only scan official/api facts, not independent research."""
+    facts = {
+        "F1": {"id": "F1", "text": "Uses MuAPI for inference",
+               "status": "SITE_SAYS", "origin": "official"},
+        "F2": {"id": "F2", "text": "Similar to Midjourney in concept",
+               "status": "INDEPENDENT", "origin": "independent"},
+        "F3": {"id": "F3", "text": "Reddit user compared it to Stability AI",
+               "status": "UNCHECKED", "origin": "independent"},
+    }
+    services = A._detect_paid_services(facts)
+    assert "Midjourney" not in services, "Midjourney only mentioned in independent research, should not trigger"
+    assert "Stability AI" not in services, "Stability only mentioned in independent research"
