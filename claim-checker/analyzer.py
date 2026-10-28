@@ -11,6 +11,7 @@ The LLM is injected (`llm`), so tests run with a fake and no network.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 
 import checks as C
@@ -294,6 +295,16 @@ Search the web to find:
 2. The tool's official website URL
 3. Any reviews or discussions about this tool
 Find the actual tool website."""
+
+P_MULTI_TOOL_EXTRACT = """A social-media caption lists multiple AI tools or software products.
+Caption:
+{caption_text}
+
+Extract every distinct tool or product mentioned.
+Return a JSON object: {{"tools": [{{"name": "tool name", "url": "official URL or GitHub URL if open-source"}}]}}.
+If a tool is a GitHub repo, use its full GitHub URL (https://github.com/owner/repo).
+If you know the tool's website, use that. If unsure, set url to null.
+Return at most 12 tools. Only include tools that are actual software products or repos, not generic concepts."""
 
 P_REEL_EXTRACT = """From this search about an Instagram reel, extract the AI tool being promoted.
 Return {{"tool_name": name or null, "tool_url": official website URL (https://...) or null,
@@ -766,6 +777,45 @@ def _identify_reel_tool(llm, reel_url, caption, on_screen, progress=lambda s: No
     if tool_url and isinstance(tool_url, str) and tool_url.startswith("http"):
         return info
     return None
+
+
+def _caption_is_multi_tool(text):
+    """Detect if a caption lists multiple tools (numbered list, bullet list, etc.)."""
+    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+    numbered = sum(1 for l in lines if re.match(r"^\d+[\.\)]\s", l))
+    if numbered >= 3:
+        return True
+    bulleted = sum(1 for l in lines if l.startswith(("- ", "• ", "* ")))
+    if bulleted >= 3:
+        return True
+    return False
+
+
+def identify_tools_from_caption(llm, caption_text, progress=lambda s: None):
+    """Extract multiple tools from a list-style caption. Returns list of {name, url}."""
+    progress("Extracting tools from the caption...")
+    try:
+        info = llm.json(
+            SYS_RULES,
+            P_MULTI_TOOL_EXTRACT.format(caption_text=caption_text[:3000]))
+    except Exception:
+        return []
+    tools = info.get("tools", [])
+    if not isinstance(tools, list):
+        return []
+    valid = []
+    for t in tools:
+        if not isinstance(t, dict):
+            continue
+        name = t.get("name")
+        if not name or not isinstance(name, str):
+            continue
+        url = t.get("url")
+        if url and isinstance(url, str) and url.startswith("http"):
+            valid.append({"name": name.strip(), "url": url.strip()})
+        else:
+            valid.append({"name": name.strip(), "url": None})
+    return valid[:12]
 
 
 def identify_tool_from_caption(llm, caption_text, progress=lambda s: None):

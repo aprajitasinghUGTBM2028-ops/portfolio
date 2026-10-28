@@ -402,6 +402,8 @@ if "saved_analyses" not in st.session_state:
     st.session_state.saved_analyses = []
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
+if "pending_caption_tools" not in st.session_state:
+    st.session_state.pending_caption_tools = None
 
 # ── Sidebar: profile + saved analyses ──────────────────────────────
 
@@ -580,16 +582,49 @@ if st.session_state.messages and st.session_state.last_result:
             st.rerun()
 
 
+# ── Multi-tool picker (shown when a caption lists several tools) ─────
+
+if st.session_state.pending_caption_tools:
+    _tools = st.session_state.pending_caption_tools
+    st.markdown("**This caption mentions multiple tools. Pick one to check:**")
+    cols = st.columns(min(len(_tools), 3))
+    for i, t in enumerate(_tools):
+        with cols[i % min(len(_tools), 3)]:
+            label = t["name"]
+            if t.get("url"):
+                label += f" ({C.esc(t['url'].split('//')[-1][:30])})"
+            if st.button(label, key=f"pick_tool_{i}", type="primary" if i == 0 else "secondary"):
+                st.session_state.pending_caption_tools = None
+                url_to_check = t.get("url") or ""
+                if url_to_check:
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"Checking **{C.esc(t['name'])}** — {C.esc(url_to_check)}"})
+                    st.session_state._pick_url = url_to_check
+                    st.session_state._pick_name = t["name"]
+                    st.rerun()
+                else:
+                    resp = f"No URL found for **{C.esc(t['name'])}**. Try pasting its website URL directly."
+                    st.session_state.messages.append({"role": "assistant", "content": resp})
+                    st.rerun()
+    st.stop()
+
+
 # ── Chat input ───────────────────────────────────────────────────────
 
-if prompt := st.chat_input("Paste a URL, GitHub link, or Instagram caption"):
+_pick_url = st.session_state.pop("_pick_url", None)
+_pick_name = st.session_state.pop("_pick_name", "")
+
+if _pick_url:
+    prompt = _pick_url
+    url, caption, on_screen = _pick_url, "", ""
+    cap_used = True
+elif prompt := st.chat_input("Paste a URL, GitHub link, or Instagram caption"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Follow-up question (no URL, but we have a previous analysis)
     url, caption, on_screen = "", "", ""
-    is_followup = False
 
     if st.session_state.pending_reel:
         url = st.session_state.pending_reel
@@ -598,8 +633,66 @@ if prompt := st.chat_input("Paste a URL, GitHub link, or Instagram caption"):
     else:
         url, caption, on_screen = _parse_input(prompt)
 
-    if not url and st.session_state.last_result:
-        is_followup = True
+    # Caption detection runs BEFORE follow-up so pasting a new caption
+    # doesn't get swallowed as a question about the previous analysis.
+    cap_used = False
+    if not url and _looks_like_caption(prompt):
+        if not _check_cap():
+            resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
+            st.session_state.messages.append({"role": "assistant", "content": resp})
+            with st.chat_message("assistant"):
+                st.markdown(resp)
+            st.stop()
+        cap_used = True
+
+        # Multi-tool caption → show picker
+        if analyzer._caption_is_multi_tool(prompt):
+            with st.chat_message("assistant"):
+                with st.status("Reading the caption...", expanded=True) as status_box:
+                    try:
+                        _key = _api_key()
+                        tools_list = analyzer.identify_tools_from_caption(
+                            analyzer.OpenAILLM(_key), prompt,
+                            progress=lambda s: status_box.write(s))
+                    except Exception as e:
+                        tools_list = []
+                        status_box.write(f"Error: {C.redact_secrets(str(e))}")
+                if tools_list and len(tools_list) >= 2:
+                    resp = f"Found **{len(tools_list)} tools** in the caption. Pick one to check."
+                    st.session_state.messages.append({"role": "assistant", "content": resp})
+                    st.markdown(resp)
+                    st.session_state.pending_caption_tools = tools_list
+                    st.rerun()
+
+        # Single-tool caption → identify and proceed
+        if not url:
+            with st.chat_message("assistant"):
+                with st.status("Identifying the tool from the caption...", expanded=True) as status_box:
+                    try:
+                        _key = _api_key()
+                        tool_info = analyzer.identify_tool_from_caption(
+                            analyzer.OpenAILLM(_key), prompt,
+                            progress=lambda s: status_box.write(s))
+                    except Exception as e:
+                        tool_info = None
+                        status_box.write(f"Error: {C.redact_secrets(str(e))}")
+                if tool_info and tool_info.get("tool_url"):
+                    url = tool_info["tool_url"]
+                    caption = prompt
+                    tool_name = tool_info.get("tool_name", "")
+                    st.markdown(f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}"})
+                else:
+                    resp = ("I couldn't identify a specific tool from that caption. "
+                            "Try pasting the tool's website URL or GitHub link instead.")
+                    st.session_state.messages.append({"role": "assistant", "content": resp})
+                    st.markdown(resp)
+                    st.stop()
+
+    # Follow-up question (no URL, no caption, but we have a previous analysis)
+    if not url and not cap_used and st.session_state.last_result:
         r = st.session_state.last_result
         brief = [{"id": f["id"], "text": f["text"], "status": f["status"]}
                  for f in r["facts"]]
@@ -622,156 +715,125 @@ if prompt := st.chat_input("Paste a URL, GitHub link, or Instagram caption"):
             st.markdown(resp)
             st.session_state.messages.append({"role": "assistant", "content": resp})
         st.stop()
+    cap_used = cap_used
+else:
+    st.stop()
 
-    cap_used = False
-    if not url and _looks_like_caption(prompt):
-        if not _check_cap():
-            resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
-            st.session_state.messages.append({"role": "assistant", "content": resp})
-            with st.chat_message("assistant"):
-                st.markdown(resp)
-            st.stop()
-        cap_used = True
-        with st.chat_message("assistant"):
-            with st.status("Identifying the tool from the caption...", expanded=True) as status_box:
-                try:
-                    _key = _api_key()
-                    tool_info = analyzer.identify_tool_from_caption(
-                        analyzer.OpenAILLM(_key), prompt,
-                        progress=lambda s: status_box.write(s))
-                except Exception as e:
-                    tool_info = None
-                    status_box.write(f"Error: {C.redact_secrets(str(e))}")
-            if tool_info and tool_info.get("tool_url"):
-                url = tool_info["tool_url"]
-                caption = prompt
-                tool_name = tool_info.get("tool_name", "")
-                st.markdown(f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}")
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": f"Found **{C.esc(tool_name)}** — analyzing {C.esc(url)}"})
-            else:
-                resp = ("I couldn't identify a specific tool from that caption. "
-                        "Try pasting the tool's website URL or GitHub link instead.")
-                st.session_state.messages.append({"role": "assistant", "content": resp})
-                st.markdown(resp)
-                st.stop()
-
-    if not url:
-        resp = "Paste a URL to check (e.g. `prompt-motion.com` or `github.com/org/repo`)."
-        st.session_state.messages.append({"role": "assistant", "content": resp})
-        with st.chat_message("assistant"):
-            st.markdown(resp)
-        st.stop()
-
-    if not cap_used and not _check_cap():
-        resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
-        st.session_state.messages.append({"role": "assistant", "content": resp})
-        with st.chat_message("assistant"):
-            st.markdown(resp)
-        st.stop()
-
+if not url:
+    resp = "Paste a URL to check (e.g. `prompt-motion.com` or `github.com/org/repo`)."
+    st.session_state.messages.append({"role": "assistant", "content": resp})
     with st.chat_message("assistant"):
-        with st.status("Analyzing...", expanded=True) as status_box:
-            try:
-                r = analyzer.analyze(url, analyzer.OpenAILLM(_key), caption, on_screen,
-                                     progress=lambda s: status_box.write(s),
-                                     user_context=st.session_state.get("user_context"))
-            except Exception as e:
-                status_box.update(label="Error", state="error")
-                err = C.redact_secrets(str(e))
-                st.error(err)
-                st.session_state.messages.append({"role": "assistant", "content": f"Error: {err}"})
-                st.stop()
-            status_box.update(label="Analysis complete", state="complete")
+        st.markdown(resp)
+    st.stop()
 
-        if r["state"] == "error":
-            msg = C.esc(r.get("message", "Unknown error"))
-            if "instagram" in url.lower() and "caption" in r.get("message", "").lower():
-                st.markdown("I couldn't read this Instagram reel automatically. "
-                            "Could you paste the caption (and any on-screen text) in the chat?")
-                st.session_state.pending_reel = url
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": "I couldn't read this Instagram reel automatically. "
-                               "Could you paste the caption (and any on-screen text) in the chat?"})
+if not cap_used and not _check_cap():
+    resp = f"Daily limit reached ({DAILY_CAP} checks). Try again tomorrow."
+    st.session_state.messages.append({"role": "assistant", "content": resp})
+    with st.chat_message("assistant"):
+        st.markdown(resp)
+    st.stop()
+
+with st.chat_message("assistant"):
+    with st.status("Analyzing...", expanded=True) as status_box:
+        try:
+            r = analyzer.analyze(url, analyzer.OpenAILLM(_key), caption, on_screen,
+                                 progress=lambda s: status_box.write(s),
+                                 user_context=st.session_state.get("user_context"))
+        except Exception as e:
+            status_box.update(label="Error", state="error")
+            err = C.redact_secrets(str(e))
+            st.error(err)
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {err}"})
+            st.stop()
+        status_box.update(label="Analysis complete", state="complete")
+
+    if r["state"] == "error":
+        msg = C.esc(r.get("message", "Unknown error"))
+        if "instagram" in url.lower() and "caption" in r.get("message", "").lower():
+            st.markdown("I couldn't read this Instagram reel automatically. "
+                        "Could you paste the caption (and any on-screen text) in the chat?")
+            st.session_state.pending_reel = url
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "I couldn't read this Instagram reel automatically. "
+                           "Could you paste the caption (and any on-screen text) in the chat?"})
+        else:
+            st.markdown(f"Could not analyze: {msg}")
+            st.session_state.messages.append({"role": "assistant", "content": f"Could not analyze: {msg}"})
+        st.stop()
+
+    if r["state"] == "thin":
+        msg = C.esc(r.get("message", "Too little text."))
+        st.markdown(msg)
+        st.session_state.messages.append({"role": "assistant", "content": msg})
+        st.stop()
+
+    # Store full result for re-render and follow-ups
+    st.session_state.last_result = r
+
+    # Format main output
+    main_text = _format_result(r)
+    st.markdown(main_text)
+
+    # Expandable detail sections
+    facts_by_id = {f["id"]: f for f in r["facts"]}
+    with st.expander(f"Claims ({len(r['claims'])})"):
+        for cl in r["claims"]:
+            ic = STATUS_ICON.get(cl["verdict"], "[?]")
+            st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
+            eids = cl.get("evidence_ids") or []
+            for eid in eids:
+                ef = facts_by_id.get(eid)
+                if ef:
+                    src = C.esc(ef.get("url", ""))
+                    st.caption(f"  {eid}: {C.esc(ef['text'])} [{ef['status']}] — {src}")
+
+    with st.expander(f"Verified facts ({len(r['facts'])})"):
+        for f in r["facts"]:
+            ic = STATUS_ICON.get(f["status"], "[?]")
+            src = f" — {C.esc(f['url'])}" if f.get("url") else ""
+            corr = ""
+            if f.get("corroborated_by"):
+                cf = facts_by_id.get(f["corroborated_by"])
+                if cf:
+                    corr = f" (corroborated by {f['corroborated_by']}: {C.esc(cf['text'][:60])})"
+            st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}{corr}")
+            st.caption(f"  Source: {C.esc(f.get('url', 'unknown'))} | Origin: {f.get('origin', '?')}")
+
+    evidence_lines = []
+    if r.get("investigation", {}).get("investigated"):
+        inv_list = r["investigation"]["investigated"]
+        evidence_lines.append(f"**Conditional branches run:** {len(inv_list)}")
+        for branch in inv_list:
+            if branch.startswith("pricing:"):
+                svc = branch.split(":", 1)[1]
+                evidence_lines.append(f"- Pricing: {C.esc(svc)} — triggered because tool's own pages mention this service as a dependency")
+            elif branch.startswith("deps:"):
+                fname = branch.split(":", 1)[1]
+                evidence_lines.append(f"- Dependencies: parsed {C.esc(fname)} from repository (code, no LLM)")
             else:
-                st.markdown(f"Could not analyze: {msg}")
-                st.session_state.messages.append({"role": "assistant", "content": f"Could not analyze: {msg}"})
-            st.stop()
+                evidence_lines.append(f"- {C.esc(branch)}")
+    if r.get("dropped_facts"):
+        evidence_lines.append(f"**Rejected facts (quote not on page):** {len(r['dropped_facts'])}")
+    if r["research"].get("rejected"):
+        evidence_lines.append(f"**Rejected research findings:** {len(r['research']['rejected'])}")
+        for item in r["research"]["rejected"]:
+            if isinstance(item, dict):
+                evidence_lines.append(f"- {C.esc(item.get('reason', ''))} — {C.esc(str(item.get('text', ''))[:80])}")
+    if r["report"].get("hooks_rejected"):
+        evidence_lines.append(f"**Rejected hooks:** {len(r['report']['hooks_rejected'])}")
+        for h in r["report"]["hooks_rejected"]:
+            evidence_lines.append(f"- {C.esc(h.get('reason', ''))} — {C.esc(h['text'][:80])}")
+    if r["research"].get("lookalikes"):
+        evidence_lines.append(f"**Lookalike domains:** {', '.join(C.esc(d) for d in r['research']['lookalikes'])}")
+    evidence_lines.append(f"Models used: {', '.join(r.get('models', []))}")
+    evidence_lines.append(f"Verdict: {C.esc(r['verdict'])} — {C.esc(r['verdict_rule'])}")
+    evidence_text = "\n\n".join(evidence_lines)
 
-        if r["state"] == "thin":
-            msg = C.esc(r.get("message", "Too little text."))
-            st.markdown(msg)
-            st.session_state.messages.append({"role": "assistant", "content": msg})
-            st.stop()
+    with st.expander("Evidence detail"):
+        st.markdown(evidence_text)
 
-        # Store full result for re-render and follow-ups
-        st.session_state.last_result = r
-
-        # Format main output
-        main_text = _format_result(r)
-        st.markdown(main_text)
-
-        # Expandable detail sections
-        facts_by_id = {f["id"]: f for f in r["facts"]}
-        with st.expander(f"Claims ({len(r['claims'])})"):
-            for cl in r["claims"]:
-                ic = STATUS_ICON.get(cl["verdict"], "[?]")
-                st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
-                eids = cl.get("evidence_ids") or []
-                for eid in eids:
-                    ef = facts_by_id.get(eid)
-                    if ef:
-                        src = C.esc(ef.get("url", ""))
-                        st.caption(f"  {eid}: {C.esc(ef['text'])} [{ef['status']}] — {src}")
-
-        with st.expander(f"Verified facts ({len(r['facts'])})"):
-            for f in r["facts"]:
-                ic = STATUS_ICON.get(f["status"], "[?]")
-                src = f" — {C.esc(f['url'])}" if f.get("url") else ""
-                corr = ""
-                if f.get("corroborated_by"):
-                    cf = facts_by_id.get(f["corroborated_by"])
-                    if cf:
-                        corr = f" (corroborated by {f['corroborated_by']}: {C.esc(cf['text'][:60])})"
-                st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}{corr}")
-                st.caption(f"  Source: {C.esc(f.get('url', 'unknown'))} | Origin: {f.get('origin', '?')}")
-
-        evidence_lines = []
-        if r.get("investigation", {}).get("investigated"):
-            inv_list = r["investigation"]["investigated"]
-            evidence_lines.append(f"**Conditional branches run:** {len(inv_list)}")
-            for branch in inv_list:
-                if branch.startswith("pricing:"):
-                    svc = branch.split(":", 1)[1]
-                    evidence_lines.append(f"- Pricing: {C.esc(svc)} — triggered because tool's own pages mention this service as a dependency")
-                elif branch.startswith("deps:"):
-                    fname = branch.split(":", 1)[1]
-                    evidence_lines.append(f"- Dependencies: parsed {C.esc(fname)} from repository (code, no LLM)")
-                else:
-                    evidence_lines.append(f"- {C.esc(branch)}")
-        if r.get("dropped_facts"):
-            evidence_lines.append(f"**Rejected facts (quote not on page):** {len(r['dropped_facts'])}")
-        if r["research"].get("rejected"):
-            evidence_lines.append(f"**Rejected research findings:** {len(r['research']['rejected'])}")
-            for item in r["research"]["rejected"]:
-                if isinstance(item, dict):
-                    evidence_lines.append(f"- {C.esc(item.get('reason', ''))} — {C.esc(str(item.get('text', ''))[:80])}")
-        if r["report"].get("hooks_rejected"):
-            evidence_lines.append(f"**Rejected hooks:** {len(r['report']['hooks_rejected'])}")
-            for h in r["report"]["hooks_rejected"]:
-                evidence_lines.append(f"- {C.esc(h.get('reason', ''))} — {C.esc(h['text'][:80])}")
-        if r["research"].get("lookalikes"):
-            evidence_lines.append(f"**Lookalike domains:** {', '.join(C.esc(d) for d in r['research']['lookalikes'])}")
-        evidence_lines.append(f"Models used: {', '.join(r.get('models', []))}")
-        evidence_lines.append(f"Verdict: {C.esc(r['verdict'])} — {C.esc(r['verdict_rule'])}")
-        evidence_text = "\n\n".join(evidence_lines)
-
-        with st.expander("Evidence detail"):
-            st.markdown(evidence_text)
-
-        # Save to chat history
-        st.session_state.messages.append({
-            "role": "assistant", "content": main_text,
-            "claims": r["claims"], "facts": r["facts"], "evidence": evidence_text})
+    # Save to chat history
+    st.session_state.messages.append({
+        "role": "assistant", "content": main_text,
+        "claims": r["claims"], "facts": r["facts"], "evidence": evidence_text})
