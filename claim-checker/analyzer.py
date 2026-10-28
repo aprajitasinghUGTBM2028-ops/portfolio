@@ -142,8 +142,8 @@ Facts: {facts}
 Return {{"claims": [{{"text":..., "category": "capability"|"pricing"|"performance"|"popularity",
 "supports": ["F1"], "contradicts": []}}]}}"""
 
-P_ANALYSIS = """You are writing for a SHORT-FORM VIDEO CREATOR choosing AI tools for reels.
-They want the honest truth — can I try this NOW, is it actually good?
+P_ANALYSIS = """You are writing for an INSTAGRAM REELS CREATOR choosing AI tools.
+They want the honest truth — can I try this NOW, is it actually good for a Reel?
 
 Use ONLY the facts below, citing fact ids.
 Facts: {facts}
@@ -205,44 +205,51 @@ this reel because..." or "Skip it because...". No hedge language.
 "sources": Array of URLs you used, grouped: tool's own pages first, then independent.
 """
 
-P_HOOKS = """You write scroll-stopping hooks for SHORT-FORM VIDEO about AI tools.
-The creator's page is about TRYING tools and showing the experience — not exposing or
-accusing tools. Hooks should make viewers want to WATCH and TRY, not feel suspicious.
+P_HOOKS = """You write hooks for INSTAGRAM REELS about AI tools.
+The creator reviews tools honestly — sometimes hyping what's genuinely cool,
+sometimes revealing the gap between marketing and reality. Both angles get views.
 
-Every hook must be a STATEMENT (never a question). Use curiosity, experience, discovery.
+TARGET: Instagram Reels (15-30 sec). Algorithm rewards: saves, shares, watch-through,
+comments. First 0.5 seconds decide if they stay.
 
-BAD hooks (accusatory, negative, boring):
-- "This tool claims 200k visits but I found zero reviews"
-- "This tool generates motion videos"
-- "Free to browse but every render costs you money"
+Write EXACTLY 4 hooks in two categories:
 
-GOOD hooks (curiosity + experience):
-- "I copied one prompt from this free site and had a motion graphic in 47 seconds"
-- "How to make AI motion graphics for your reels using nothing but one line of text"
-- "Everyone's paying for motion templates when this site has 230 free prompts that work"
-- "I installed an AI that mass-produces GitHub PRs while you sleep — here's what my terminal looked like at 6 a.m."
+HYPE HOOKS (2): Ride the excitement. Make viewers want to try it NOW.
+Use these Instagram content psychology principles:
+- "curiosity_gap": Open a loop the viewer MUST close ("I found a site that...")
+- "transformation": Show a before/after in one sentence ("One line of text became...")
+- "social_proof": Leverage numbers or community ("10k devs are using this and...")
+- "fomo": Time pressure or exclusivity ("This free tool won't stay free...")
+Pick the best-fitting principle for each hook.
 
-Write 6 hooks, each a different type: "story"|"how-to"|"gap"|"reveal"|"challenge"|"behind-the-scenes".
-"story" = I tried X and here's what happened. "how-to" = How to do X using Y.
-"gap" = Everyone does X when they could do Y. "reveal" = The thing nobody tells you about X.
-"challenge" = I tried X for Y days/hours. "behind-the-scenes" = What it actually looks like when you use X.
+GAP HOOKS (2): Reveal the honest truth. Make viewers feel SMART for knowing.
+This is NOT accusatory — it's "here's what nobody tells you" energy.
+Use these principles:
+- "pattern_interrupt": Break an assumption ("Everyone thinks X is free but...")
+- "insider_knowledge": Share what you learned by actually trying it ("I spent 2 hours...")
+- "contrarian_take": Flip the narrative ("This 'free' tool cost me $20 before I got one result")
+- "myth_busting": Correct a specific misconception with evidence
+Pick the best-fitting principle for each hook.
+
+Every hook must be a STATEMENT (never a question).
+If the tool has a paid dependency and the user's budget is limited, GAP hooks should
+frame it as: "here's the real cost AND here's how to still make the reel if you want to."
 
 Also provide:
-"reel_structure": Object with 4 fields:
-  "hook_0_2s": what's on screen at 0-2 seconds
-  "demo_2_8s": what you show at 2-8 seconds
-  "reveal_8_15s": the key moment at 8-15 seconds
-  "cta_15_20s": the ending + call to action
+"reel_structure": Object with 4 fields (for Instagram Reels specifically):
+  "hook_0_2s": what's on screen at 0-2 seconds (must stop the scroll)
+  "demo_2_8s": what you show at 2-8 seconds (the actual tool in action)
+  "reveal_8_15s": the key moment at 8-15 seconds (the result or the catch)
+  "cta_15_20s": the ending + call to action (save/share trigger)
 
 "distinct_angle": One angle the tool's own pitch would never give you.
-  Make it specific and verifiable: "The gallery is free but every render depends on
-  a paid Claude plan — the site never puts this prominently."
+  Make it specific and verifiable.
 
 Use ONLY these facts (cite fact ids). Self-reported numbers need "the site says" prefix.
 Facts: {facts}
 Scores: {scores}
 
-Return {{"hooks": [{{"text":..., "type":..., "fact_ids": [..]}}],
+Return {{"hooks": [{{"text":..., "type": "hype"|"gap", "principle":..., "why_it_works": 1 sentence explaining the psychology, "fact_ids": [..]}}],
 "reel_structure": {{"hook_0_2s":..., "demo_2_8s":..., "reveal_8_15s":..., "cta_15_20s":...}},
 "distinct_angle": {{"text":..., "fact_ids": [..]}}}}"""
 
@@ -633,7 +640,7 @@ def stage_report(llm, facts, scores, claims, user_context=None):
     creative = llm.json(SYS_RULES, P_HOOKS.format(
         facts=json.dumps(brief), scores=json.dumps(scores)), temperature=0.6)
 
-    hooks = [C.validate_hook(h, facts) for h in (creative.get("hooks") or [])]
+    hooks = [C.validate_hook(h, facts) for h in (creative.get("hooks") or [])[:6]]
     angle = creative.get("distinct_angle") or {}
     angle_ok = bool(angle.get("fact_ids")) and all(i in facts for i in angle.get("fact_ids", []))
     texts = [facts[i]["text"] for i in angle.get("fact_ids", []) if i in facts]

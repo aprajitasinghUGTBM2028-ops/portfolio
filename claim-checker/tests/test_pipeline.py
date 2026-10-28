@@ -51,11 +51,12 @@ class FakeLLM:
                     "why_not_viral": "Render step is behind a paywall.",
                     "risk_warnings": ["Traffic numbers are self-reported"],
                     "sources": ["https://prompt-motion.com/"]}
-        if "scroll-stopping" in user:
+        if "Instagram" in user or "INSTAGRAM" in user or "hooks" in user.lower():
             return {"hooks": [
-                {"text": "I copied one prompt from this free site and had a motion graphic ready for my reel", "type": "story", "fact_ids": ["F1"]},
-                {"text": "9 million people use this every day without noticing", "type": "gap", "fact_ids": ["F3"]},
-                {"text": "Is this the future of motion design?", "type": "challenge", "fact_ids": ["F1"]}],
+                {"text": "I copied one prompt from this free site and had a motion graphic ready for my reel", "type": "hype", "principle": "curiosity_gap", "why_it_works": "Opens a loop — viewers need to see the result", "fact_ids": ["F1"]},
+                {"text": "This free prompt gallery just replaced my entire motion template subscription", "type": "hype", "principle": "transformation", "why_it_works": "Before/after framing triggers saves", "fact_ids": ["F1", "F2"]},
+                {"text": "Everyone thinks this AI motion site is free but I spent 20 dollars before getting one result", "type": "gap", "principle": "pattern_interrupt", "why_it_works": "Breaks the free assumption — drives comments", "fact_ids": ["F2"]},
+                {"text": "Is this the future of motion design?", "type": "gap", "principle": "contrarian_take", "fact_ids": ["F1"]}],
                 "reel_structure": {"hook_0_2s": "Result playing full screen", "demo_2_8s": "Copy prompt, paste into Claude", "reveal_8_15s": "Side by side prompt vs output", "cta_15_20s": "The catch + CTA"},
                 "distinct_angle": {"text": "Free to browse, but rendering needs a paid model", "fact_ids": ["F2"]}}
         return {}
@@ -81,7 +82,8 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     assert any(isinstance(x, dict) and "reason" in x for x in r["research"]["rejected"])
     assert r["research"]["lookalikes"] == ["promptmotion.com"]
     texts = [h["text"] for h in r["report"]["hooks"]]
-    assert texts == ["I copied one prompt from this free site and had a motion graphic ready for my reel"]
+    assert "I copied one prompt from this free site and had a motion graphic ready for my reel" in texts
+    assert all(h.get("type") in ("hype", "gap") for h in r["report"]["hooks"])
     assert len(r["report"]["hooks_rejected"]) == 2            # invented number + question
     assert r["claims"][1]["verdict"] == "UNVERIFIABLE"        # popularity claim with no independent source
     assert r["scores"]["create"] == 3
@@ -179,6 +181,15 @@ def test_user_context_passed(monkeypatch):
     ctx = {"budget": "Free only", "experience": "Non-technical", "use_case": "Instagram Reels"}
     r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28), user_context=ctx)
     assert r["state"] == "ok"
+
+def test_hooks_have_hype_and_gap(monkeypatch):
+    monkeypatch.setattr(F, "fetch", fake_fetch)
+    r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28))
+    hooks = r["report"]["hooks"]
+    assert len(hooks) >= 1
+    for h in hooks:
+        assert h["type"] in ("hype", "gap")
+        assert h.get("principle"), "every hook should have a psychology principle"
 
 def test_cross_verify_upgrades_corroborated():
     """UNCHECKED independent fact matching a SITE_SAYS fact gets upgraded to CORROBORATED."""

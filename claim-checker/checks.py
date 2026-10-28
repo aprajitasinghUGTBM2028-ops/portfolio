@@ -290,7 +290,10 @@ def validate_hook(hook: dict, facts_by_id: dict) -> dict:
     text = str((hook or {}).get("text", "")).strip()
     htype = str((hook or {}).get("type", "data")).lower()
     ids = [i for i in (hook or {}).get("fact_ids", []) if isinstance(i, str)]
-    out = {"ok": False, "reason": "", "text": text, "type": htype, "fact_ids": ids}
+    principle = str((hook or {}).get("principle", "")).strip()
+    why = str((hook or {}).get("why_it_works", "")).strip()
+    out = {"ok": False, "reason": "", "text": text, "type": htype, "fact_ids": ids,
+           "principle": principle, "why_it_works": why}
     if not 20 <= len(text) <= 300:
         out["reason"] = "wrong length"
         return out
@@ -317,7 +320,7 @@ def validate_hook(hook: dict, facts_by_id: dict) -> dict:
     return out
 
 
-def pick_hooks(validated: list, keep: int = 3) -> list:
+def pick_hooks(validated: list, keep: int = 4) -> list:
     good = [h for h in validated if h["ok"]]
     chosen, seen = [], set()
     for h in good:

@@ -168,11 +168,31 @@ def _format_result(r):
             lines.append(f"{i}. {C.esc(step)}")
         lines.append("")
 
-    # Content hooks
-    if rpt.get("hooks"):
-        lines.append("**Content hooks**")
-        for h in rpt["hooks"]:
-            lines.append(f"- **[{C.esc(h['type'])}]** {C.esc(h['text'])}")
+    # Content hooks — split by hype vs gap
+    hooks = rpt.get("hooks") or []
+    hype = [h for h in hooks if h.get("type") == "hype"]
+    gap = [h for h in hooks if h.get("type") == "gap"]
+    other = [h for h in hooks if h.get("type") not in ("hype", "gap")]
+    if hype:
+        lines.append("**Hype hooks** (ride the excitement)")
+        for h in hype:
+            prin = f" *({C.esc(h.get('principle', ''))})*" if h.get("principle") else ""
+            lines.append(f"- {C.esc(h['text'])}{prin}")
+            if h.get("why_it_works"):
+                lines.append(f"  Why it works: {C.esc(h['why_it_works'])}")
+        lines.append("")
+    if gap:
+        lines.append("**Gap hooks** (reveal the truth)")
+        for h in gap:
+            prin = f" *({C.esc(h.get('principle', ''))})*" if h.get("principle") else ""
+            lines.append(f"- {C.esc(h['text'])}{prin}")
+            if h.get("why_it_works"):
+                lines.append(f"  Why it works: {C.esc(h['why_it_works'])}")
+        lines.append("")
+    if other:
+        lines.append("**More hooks**")
+        for h in other:
+            lines.append(f"- **[{C.esc(h.get('type', 'hook'))}]** {C.esc(h['text'])}")
         lines.append("")
 
     # Reel structure
@@ -248,34 +268,103 @@ if not _key:
 st.title("AI Hype Claim Checker")
 st.caption("Paste a tool URL. I'll search Reddit, HN, X, YouTube, LinkedIn, and more to check what's real.")
 
-# ── User context (asked once per session) ────────────────────────────
+# ── Session state init ──────────────────────────────────────────────
 
 if "user_context" not in st.session_state:
     st.session_state.user_context = None
-
-with st.sidebar:
-    if st.session_state.user_context is None:
-        st.markdown("**Quick setup** (one time)")
-        with st.form("user_context_form"):
-            budget = st.selectbox("Your budget", ["Free only", "Under $20/mo", "Under $50/mo", "Flexible"])
-            experience = st.selectbox("Technical level", ["Non-technical", "Some coding", "Developer"])
-            use_case = st.selectbox("Content for", ["Instagram Reels", "YouTube Shorts", "TikTok", "All platforms"])
-            if st.form_submit_button("Save"):
-                st.session_state.user_context = {"budget": budget, "experience": experience, "use_case": use_case}
-                st.rerun()
-    else:
-        ctx = st.session_state.user_context
-        st.markdown(f"**You:** {ctx['experience']} · {ctx['budget']} · {ctx['use_case']}")
-        if st.button("Edit profile"):
-            st.session_state.user_context = None
-            st.rerun()
-
-# ── Chat state ───────────────────────────────────────────────────────
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "pending_reel" not in st.session_state:
     st.session_state.pending_reel = None
+if "saved_analyses" not in st.session_state:
+    st.session_state.saved_analyses = []
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
+
+# ── Sidebar: profile + saved analyses ──────────────────────────────
+
+with st.sidebar:
+    st.markdown("### Your profile")
+    if st.session_state.user_context is None:
+        with st.form("user_context_form"):
+            budget = st.selectbox("Your budget", ["Free only", "Under $20/mo", "Under $50/mo", "Flexible"])
+            experience = st.selectbox("Technical level", ["Non-technical", "Some coding", "Developer"])
+            if st.form_submit_button("Save"):
+                st.session_state.user_context = {
+                    "budget": budget, "experience": experience, "use_case": "Instagram Reels"}
+                st.rerun()
+    else:
+        ctx = st.session_state.user_context
+        st.markdown(f"**{ctx['experience']}** · {ctx['budget']} · Instagram Reels")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Edit profile"):
+                st.session_state.user_context = None
+                st.rerun()
+        with col2:
+            if st.session_state.last_result and st.button("Re-analyze"):
+                st.session_state["_rerender"] = True
+                st.rerun()
+
+    # Saved analyses
+    st.markdown("---")
+    st.markdown("### Saved analyses")
+    if not st.session_state.saved_analyses:
+        st.caption("No saved analyses yet. Run a check and click Save.")
+    for i, saved in enumerate(st.session_state.saved_analyses):
+        if st.button(f"{saved['name']} — {saved['verdict']}", key=f"saved_{i}"):
+            st.session_state["_view_saved"] = i
+            st.rerun()
+
+    # MCP integration note
+    st.markdown("---")
+    st.caption("This pipeline also works as an MCP server for Claude Desktop. "
+               "See mcp\\_server.py in the repo.")
+
+# ── Re-render with new profile (no new API call) ───────────────────
+
+if st.session_state.get("_rerender") and st.session_state.last_result:
+    del st.session_state["_rerender"]
+    r = st.session_state.last_result
+    with st.chat_message("assistant"):
+        with st.status("Re-analyzing with updated profile...", expanded=True) as status_box:
+            try:
+                new_report = analyzer.stage_report(
+                    analyzer.OpenAILLM(_key),
+                    {f["id"]: f for f in r["facts"]},
+                    r["scores"], r["claims"],
+                    user_context=st.session_state.get("user_context"))
+                r["report"] = new_report
+                st.session_state.last_result = r
+            except Exception as e:
+                status_box.update(label="Error", state="error")
+                st.error(C.redact_secrets(str(e)))
+                st.stop()
+            status_box.update(label="Updated for your profile", state="complete")
+        main_text = _format_result(r)
+        st.markdown(main_text)
+        st.session_state.messages.append({
+            "role": "assistant", "content": main_text,
+            "claims": r["claims"], "facts": r["facts"],
+            "evidence": f"Re-rendered with profile: {st.session_state.user_context}"})
+    st.stop()
+
+# ── View saved analysis ─────────────────────────────────────────────
+
+if st.session_state.get("_view_saved") is not None:
+    idx = st.session_state.pop("_view_saved")
+    saved = st.session_state.saved_analyses[idx]
+    st.markdown(f"### Saved: {C.esc(saved['name'])}")
+    st.markdown(saved["content"])
+    with st.expander(f"Claims ({len(saved['claims'])})"):
+        for cl in saved["claims"]:
+            ic = STATUS_ICON.get(cl["verdict"], "[?]")
+            st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
+    with st.expander(f"Facts ({len(saved['facts'])})"):
+        for f in saved["facts"]:
+            ic = STATUS_ICON.get(f["status"], "[?]")
+            st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}")
+    st.stop()
 
 # Render chat history
 for msg in st.session_state.messages:
@@ -298,22 +387,49 @@ for msg in st.session_state.messages:
 
 # ── Chat input ───────────────────────────────────────────────────────
 
-if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add caption for a reel"):
+if prompt := st.chat_input("Paste a URL, or ask a follow-up about the last analysis"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # If waiting for reel caption, the whole input is caption text
+    # Follow-up question (no URL, but we have a previous analysis)
+    url, caption, on_screen = "", "", ""
+    is_followup = False
+
     if st.session_state.pending_reel:
         url = st.session_state.pending_reel
         caption = prompt
-        on_screen = ""
         st.session_state.pending_reel = None
     else:
         url, caption, on_screen = _parse_input(prompt)
 
+    if not url and st.session_state.last_result:
+        is_followup = True
+        r = st.session_state.last_result
+        brief = [{"id": f["id"], "text": f["text"], "status": f["status"]}
+                 for f in r["facts"]]
+        context = (f"Previous analysis of {r['name']} ({r['url']}):\n"
+                   f"Facts: {C.fence_text(str(brief))}\n"
+                   f"Scores: {str(r['scores'])}\n"
+                   f"Verdict: {r['verdict']}")
+        with st.chat_message("assistant"):
+            with st.status("Thinking...", expanded=True) as status_box:
+                try:
+                    answer = analyzer.OpenAILLM(_key).json(
+                        "You are a helpful AI tool analyst. Answer based on the analysis context. "
+                        "Be direct and specific. If the user asks for alternatives or workarounds, "
+                        "give concrete steps. Reply as JSON: {\"answer\": \"your answer\"}",
+                        f"{context}\n\nUser question: {prompt}")
+                    resp = str(answer.get("answer", "I couldn't answer that."))
+                except Exception as e:
+                    resp = f"Error: {C.redact_secrets(str(e))}"
+                status_box.update(label="Done", state="complete")
+            st.markdown(resp)
+            st.session_state.messages.append({"role": "assistant", "content": resp})
+        st.stop()
+
     if not url:
-        resp = "I need a URL to check. Paste something like `prompt-motion.com` or `https://github.com/org/repo`."
+        resp = "Paste a URL to check (e.g. `prompt-motion.com` or `github.com/org/repo`)."
         st.session_state.messages.append({"role": "assistant", "content": resp})
         with st.chat_message("assistant"):
             st.markdown(resp)
@@ -361,11 +477,14 @@ if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add cap
             st.session_state.messages.append({"role": "assistant", "content": msg})
             st.stop()
 
+        # Store full result for re-render and follow-ups
+        st.session_state.last_result = r
+
         # Format main output
         main_text = _format_result(r)
         st.markdown(main_text)
 
-        # Expandable detail sections (inside the chat bubble)
+        # Expandable detail sections
         with st.expander(f"Claims ({len(r['claims'])})"):
             for cl in r["claims"]:
                 ic = STATUS_ICON.get(cl["verdict"], "[?]")
@@ -399,7 +518,18 @@ if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add cap
         with st.expander("Evidence detail"):
             st.markdown(evidence_text)
 
-        # Save to history
+        # Save button
+        if st.button("Save this analysis", key="save_btn"):
+            st.session_state.saved_analyses.append({
+                "name": r.get("name", "Unknown"),
+                "verdict": r["verdict"],
+                "content": main_text,
+                "claims": r["claims"],
+                "facts": r["facts"],
+                "url": r["url"]})
+            st.toast(f"Saved: {r.get('name', 'analysis')}")
+
+        # Save to chat history
         st.session_state.messages.append({
             "role": "assistant", "content": main_text,
             "claims": r["claims"], "facts": r["facts"], "evidence": evidence_text})
