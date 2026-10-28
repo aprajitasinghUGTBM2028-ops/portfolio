@@ -13,3 +13,7 @@ desktop.ini
 # Logs / temp
 *.log
 *.tmp
+
+# Python
+__pycache__/
+.pytest_cache/
