@@ -20,8 +20,8 @@ from checks import domain_of, is_thin, strip_tracking
 UA = {"User-Agent": "Mozilla/5.0 (compatible; ClaimChecker/2.0)"}
 TIMEOUT = 12
 MAX_BYTES = 1_500_000
-PER_PAGE_CHARS = 2000
-TOTAL_CHARS = 12000
+PER_PAGE_CHARS = 3000
+TOTAL_CHARS = 20000
 MAX_SUBPAGES = 5
 SUBPAGE_KEYWORDS = ("pricing", "price", "plans", "faq", "docs", "about", "sponsor",
                     "how", "features", "install", "getting-started", "terms")

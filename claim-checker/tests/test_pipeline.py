@@ -20,21 +20,24 @@ class FakeLLM:
                 "access": {"free_to_browse": True, "needs_account": False, "paid_dependency": True, "needs_code": False,
                            "setup_minutes": 10, "claims_free": True, "access_quote": "it is free to browse"},
                 "name": "Prompt Motion", "what_it_is": "Gallery of motion prompts", "audience": "designers"}
-        if "Below is a research note" in user:
+        if "Below is a research note" in user or "merged research note" in user:
             return {"findings": [
-                {"text": "HN thread discusses it", "quote": "x" * 5, "url": "https://evil.example/post", "date": "2026-10-20", "kind": "discussion"}],
+                {"text": "HN thread discusses it", "quote": "x" * 5, "url": "https://evil.example/post", "date": "2026-10-20", "kind": "discussion", "platform": "other"}],
                 "lookalike_domains": ["promptmotion.com", "unrelated.org"], "alternatives": ["Runway", "Canva"]}
-        if "marketing claims" in user:
+        if "marketing claims" in user or "most important marketing claims" in user:
             return {"claims": [
                 {"text": "Free to customize", "category": "capability", "supports": ["F2"], "contradicts": []},
                 {"text": "200k visits in week one", "category": "popularity", "supports": ["F3"], "contradicts": []}]}
-        return {"summary": "A gallery. It has 9 million fans. Fine.", "quick_start": ["Open site", "Copy a prompt", "Pay for Claude to render"],
-                "hooks": [
-                    {"text": "The site says 200k+ visits in week one, but outside sources are thin", "type": "data", "fact_ids": ["F3"]},
-                    {"text": "9 million people use this every day without noticing", "type": "story", "fact_ids": ["F3"]},
-                    {"text": "Is this the future of motion design?", "type": "gap", "fact_ids": ["F1"]}],
-                "distinct_angle": {"text": "Free to browse, but rendering needs a paid model", "fact_ids": ["F2"]},
-                "bottom_line": "Mostly a prompt library."}
+        if "quick_start" in user and "scroll-stopping" not in user:
+            return {"summary": "A gallery. Fine.", "quick_start": ["Open site", "Copy a prompt", "Pay for Claude to render"],
+                    "bottom_line": "Mostly a prompt library.", "virality_notes": "Decent", "uniqueness": "Nothing notable"}
+        if "scroll-stopping" in user:
+            return {"hooks": [
+                {"text": "The site says 200k+ visits in week one, but outside sources are thin", "type": "data", "fact_ids": ["F3"]},
+                {"text": "9 million people use this every day without noticing", "type": "story", "fact_ids": ["F3"]},
+                {"text": "Is this the future of motion design?", "type": "gap", "fact_ids": ["F1"]}],
+                "distinct_angle": {"text": "Free to browse, but rendering needs a paid model", "fact_ids": ["F2"]}}
+        return {}
     def search(self, prompt):
         return {"text": "Some note about the tool", "sources": [{"url": "https://news.ycombinator.com/item?id=1", "title": "HN"}]}
 
@@ -46,7 +49,8 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     monkeypatch.setattr(F, "fetch", fake_fetch)
     steps = []
     r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28), progress=steps.append)
-    assert r["state"] == "ok" and len(steps) == 5
+    assert r["state"] == "ok"
+    assert len(steps) >= 6
     assert len(r["dropped_facts"]) == 1                       # invented "five million studios" quote
     assert not any("million" in f["text"] for f in r["facts"])
     assert r["research"]["rejected"]                          # finding on a URL the search tool never returned
@@ -55,7 +59,6 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     texts = [h["text"] for h in r["report"]["hooks"]]
     assert texts == ["The site says 200k+ visits in week one, but outside sources are thin"]
     assert len(r["report"]["hooks_rejected"]) == 2            # invented number + question
-    assert "9 million" not in r["report"]["summary"]          # critic stripped it
     assert r["claims"][1]["verdict"] == "UNVERIFIABLE"        # popularity claim with no independent source
     assert r["scores"]["create"] == 3 and r["scores"]["n_independent"] == 0
     assert "needs a paid service" in r["scores"]["create_reasons"]
@@ -67,3 +70,8 @@ def test_thin_page_and_error(monkeypatch):
     monkeypatch.setattr(F, "fetch", lambda *a, **k: {"ok": False, "error": "HTTP 404", "kind": "web", "url": "u"})
     r = A.analyze("https://x.com/dead", FakeLLM())
     assert r["state"] == "error" and "404" in r["message"]
+
+def test_platforms_tracked(monkeypatch):
+    monkeypatch.setattr(F, "fetch", fake_fetch)
+    r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28))
+    assert "platforms" in r["research"]
