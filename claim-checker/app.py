@@ -410,21 +410,6 @@ with st.sidebar:
                 st.session_state["_rerender"] = True
                 st.rerun()
 
-        if st.session_state.last_result:
-            r = st.session_state.last_result
-            already_saved = any(s.get("url") == r.get("url") for s in st.session_state.saved_analyses)
-            if not already_saved:
-                if st.button("Save last analysis", key="sidebar_save"):
-                    st.session_state.saved_analyses.append({
-                        "name": r.get("name", "Unknown"),
-                        "verdict": r["verdict"],
-                        "content": _format_result(r),
-                        "claims": r["claims"],
-                        "facts": r["facts"],
-                        "url": r.get("url", "")})
-                    st.rerun()
-            else:
-                st.caption("Last analysis saved.")
 
     # History
     st.markdown("---")
@@ -497,15 +482,22 @@ if st.session_state.get("_view_saved") is not None:
     if st.button("Back to chat"):
         st.rerun()
     st.markdown(f"### Saved: {C.esc(saved['name'])}")
-    st.markdown(saved["content"])
-    with st.expander(f"Claims ({len(saved['claims'])})"):
-        for cl in saved["claims"]:
-            ic = STATUS_ICON.get(cl["verdict"], "[?]")
-            st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
-    with st.expander(f"Facts ({len(saved['facts'])})"):
-        for f in saved["facts"]:
-            ic = STATUS_ICON.get(f["status"], "[?]")
-            st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}")
+    for msg in saved.get("messages", []):
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"], unsafe_allow_html=False)
+            if msg.get("claims"):
+                with st.expander(f"Claims ({len(msg['claims'])})"):
+                    for cl in msg["claims"]:
+                        ic = STATUS_ICON.get(cl["verdict"], "[?]")
+                        st.markdown(f"{ic} **{C.esc(cl['verdict'])}** — {C.esc(cl['text'])}")
+            if msg.get("facts"):
+                with st.expander(f"Verified facts ({len(msg['facts'])})"):
+                    for f_ in msg["facts"]:
+                        ic = STATUS_ICON.get(f_["status"], "[?]")
+                        st.markdown(f"{ic} **{C.esc(f_['status'])}** — {C.esc(f_['text'])}")
+            if msg.get("evidence"):
+                with st.expander("Evidence detail"):
+                    st.markdown(msg["evidence"])
     st.stop()
 
 # Render chat history
@@ -525,6 +517,28 @@ for msg in st.session_state.messages:
         if msg.get("evidence"):
             with st.expander("Evidence detail"):
                 st.markdown(msg["evidence"])
+
+# ── Save chat button (at end of conversation) ───────────────────────
+if st.session_state.messages and st.session_state.last_result:
+    _r = st.session_state.last_result
+    _saved_idx = next((i for i, s in enumerate(st.session_state.saved_analyses)
+                       if s.get("url") == _r.get("url")), None)
+    if _saved_idx is not None:
+        _saved = st.session_state.saved_analyses[_saved_idx]
+        if len(_saved.get("messages", [])) < len(st.session_state.messages):
+            if st.button("Update saved chat"):
+                st.session_state.saved_analyses[_saved_idx]["messages"] = list(st.session_state.messages)
+                st.rerun()
+        else:
+            st.caption("Chat saved.")
+    else:
+        if st.button("Save this chat"):
+            st.session_state.saved_analyses.append({
+                "name": _r.get("name", "Unknown"),
+                "verdict": _r["verdict"],
+                "url": _r.get("url", ""),
+                "messages": list(st.session_state.messages)})
+            st.rerun()
 
 
 # ── Chat input ───────────────────────────────────────────────────────
