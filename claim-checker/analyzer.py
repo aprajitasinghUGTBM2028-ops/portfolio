@@ -192,8 +192,10 @@ Shorts, stories, B-roll, tutorials? What's the most common use? Be specific.
 "why_viral": 1-2 sentences. What specific thing about this tool makes it reel-worthy?
 "why_not_viral": 1-2 sentences. What would stop it from going viral?
 
-"quick_start": 3-5 steps to TRY it right now. Step 1 = the URL.
-  Be honest: "Sign up (free)" vs "Get a Claude Pro plan (paid)".
+"quick_start": 3-5 concrete steps to TRY it right now. Step 1 = the actual URL to visit
+  (e.g. "Go to https://toolname.com"). Each step must be specific to THIS tool — include
+  real button names, menu items, or commands from the page. No generic filler like "explore
+  the interface". Be honest: "Sign up (free)" vs "Get a Claude Pro plan (paid)".
 
 "bottom_line": 2-3 sentences. Would YOU make a reel about this? Direct answer: "Yes, make
 this reel because..." or "Skip it because...". No hedge language.

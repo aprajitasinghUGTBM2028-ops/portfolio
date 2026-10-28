@@ -429,9 +429,15 @@ with st.sidebar:
     if not st.session_state.saved_analyses:
         st.caption("No saved checks yet.")
     for i, saved in enumerate(st.session_state.saved_analyses):
-        if st.button(f"{saved['name']} — {saved['verdict']}", key=f"saved_{i}"):
-            st.session_state["_view_saved"] = i
-            st.rerun()
+        col_view, col_del = st.columns([4, 1])
+        with col_view:
+            if st.button(f"{saved['name']} — {saved['verdict']}", key=f"saved_{i}"):
+                st.session_state["_view_saved"] = i
+                st.rerun()
+        with col_del:
+            if st.button("x", key=f"del_{i}", help="Delete this saved check"):
+                st.session_state.saved_analyses.pop(i)
+                st.rerun()
 
     # MCP integration
     st.markdown("---")
@@ -490,9 +496,17 @@ if st.session_state.get("_rerender") and st.session_state.last_result:
 
 if st.session_state.get("_view_saved") is not None:
     idx = st.session_state.pop("_view_saved")
-    saved = st.session_state.saved_analyses[idx]
-    if st.button("Back to chat"):
+    if idx >= len(st.session_state.saved_analyses):
         st.rerun()
+    saved = st.session_state.saved_analyses[idx]
+    col_back, col_del = st.columns([3, 1])
+    with col_back:
+        if st.button("Back to chat"):
+            st.rerun()
+    with col_del:
+        if st.button("Delete this check", type="secondary"):
+            st.session_state.saved_analyses.pop(idx)
+            st.rerun()
     st.markdown(f"### Saved: {C.esc(saved['name'])}")
     for msg in saved.get("messages", []):
         with st.chat_message(msg["role"]):
@@ -530,21 +544,28 @@ for msg in st.session_state.messages:
             with st.expander("Evidence detail"):
                 st.markdown(msg["evidence"])
 
-# ── Save chat button (at end of conversation) ───────────────────────
+# ── Save / update / delete chat (right after conversation) ──────────
 if st.session_state.messages and st.session_state.last_result:
     _r = st.session_state.last_result
     _saved_idx = next((i for i, s in enumerate(st.session_state.saved_analyses)
                        if s.get("url") == _r.get("url")), None)
+    st.markdown("---")
     if _saved_idx is not None:
         _saved = st.session_state.saved_analyses[_saved_idx]
-        if len(_saved.get("messages", [])) < len(st.session_state.messages):
-            if st.button("Update saved chat"):
-                st.session_state.saved_analyses[_saved_idx]["messages"] = list(st.session_state.messages)
+        col_s, col_d = st.columns([3, 1])
+        with col_s:
+            if len(_saved.get("messages", [])) < len(st.session_state.messages):
+                if st.button("Update saved chat", type="primary"):
+                    st.session_state.saved_analyses[_saved_idx]["messages"] = list(st.session_state.messages)
+                    st.rerun()
+            else:
+                st.caption("Chat saved.")
+        with col_d:
+            if st.button("Delete saved", type="secondary"):
+                st.session_state.saved_analyses.pop(_saved_idx)
                 st.rerun()
-        else:
-            st.caption("Chat saved.")
     else:
-        if st.button("Save this chat"):
+        if st.button("Save this chat", type="primary"):
             st.session_state.saved_analyses.append({
                 "name": _r.get("name", "Unknown"),
                 "verdict": _r["verdict"],
