@@ -90,13 +90,13 @@ def _format_result(r):
             lines.append(f"- Time to first result: {C.esc(tryability['time_to_result'])}")
         lines.append("")
 
-    # Setup steps with time estimates
+    # Setup steps with time estimates — sum from steps, not LLM header
     steps = rpt.get("setup_steps") or []
     if steps:
-        lines.append("**Setup time:** ~{} min estimated".format(
-            sc.get("setup_minutes") or sum(
-                int("".join(c for c in str(s.get("time", "5")) if c.isdigit()) or "5")
-                for s in steps)))
+        step_total = sum(
+            int("".join(c for c in str(s.get("time", "5")) if c.isdigit()) or "5")
+            for s in steps)
+        lines.append(f"**Setup time:** ~{step_total} min estimated")
         for i, step in enumerate(steps, 1):
             t = step.get("time", "")
             lines.append(f"- Step {i}: {C.esc(step.get('step', ''))} ({C.esc(t)} min)")
@@ -106,7 +106,7 @@ def _format_result(r):
         lines.append(f"**Setup time:** ~{sm} min estimated" if sm else "**Setup time:** ~5 min estimated")
         lines.append("")
 
-    # Paid dependency
+    # Access flags
     pd = sc.get("paid_dependency")
     if pd is True:
         lines.append("**Paid dependency:** Yes — needs a paid service")
@@ -114,6 +114,12 @@ def _format_result(r):
         lines.append("**Paid dependency:** Unknown")
     else:
         lines.append("**Paid dependency:** No")
+    if sc.get("requires_install"):
+        lines.append("**Requires install:** Yes — desktop app or local setup needed")
+    if sc.get("requires_gpu"):
+        lines.append("**GPU needed:** Yes — needs a GPU for reasonable performance")
+    if sc.get("license_restricts_commercial"):
+        lines.append("**License:** Restricts commercial use")
     lines.append("")
 
     # Scores table — rule-based, not LLM-generated

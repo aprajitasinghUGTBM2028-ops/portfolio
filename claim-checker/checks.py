@@ -181,7 +181,8 @@ def browse_score(free_to_browse, needs_account) -> dict:
     return {"score": clamp(s, 1, 5), "reasons": reasons}
 
 
-def create_score(paid_dep, needs_code, setup_minutes) -> dict:
+def create_score(paid_dep, needs_code, setup_minutes, requires_install=None,
+                  requires_gpu=None, license_restricts_commercial=None) -> dict:
     reasons = []
     s = 5
     if paid_dep is True:
@@ -199,6 +200,15 @@ def create_score(paid_dep, needs_code, setup_minutes) -> dict:
     if isinstance(setup_minutes, (int, float)) and setup_minutes > 30:
         s -= 1
         reasons.append(f"setup takes ~{int(setup_minutes)} min")
+    if requires_install is True:
+        s -= 1
+        reasons.append("requires local install")
+    if requires_gpu is True:
+        s -= 1
+        reasons.append("needs a GPU")
+    if license_restricts_commercial is True:
+        s -= 1
+        reasons.append("license restricts commercial use")
     return {"score": clamp(s, 1, 5), "reasons": reasons}
 
 

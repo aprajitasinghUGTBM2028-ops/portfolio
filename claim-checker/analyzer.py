@@ -84,12 +84,20 @@ Each fact: {{"text": short plain statement, "quote": EXACT sentence copied from 
 Also fill "access" (use null when the pages do not say):
 {{"free_to_browse": bool|null, "needs_account": bool|null, "paid_dependency": bool|null,
  "needs_code": bool|null, "setup_minutes": number|null, "claims_free": bool|null,
+ "requires_install": bool|null, "requires_gpu": bool|null,
+ "large_download_gb": number|null, "license_restricts_commercial": bool|null,
  "access_quote": EXACT sentence supporting these}}.
 paid_dependency = true if using the tool REQUIRES paying for something ELSE to work —
 a paid API key, a paid subscription to another service (Claude Pro, GPT-4, AWS), a paid
 model. Even if the tool itself is "free", if it depends on a paid platform, this is true.
 A free tier that actually works without paying = false. If unclear, null.
 IMPORTANT: If the tool requires Claude, GPT, or any LLM to function, paid_dependency = true.
+requires_install = true if the user must download and install a desktop app, CLI, or
+Docker container to use the tool (not just a browser extension). false for pure web apps.
+requires_gpu = true if a GPU or specific hardware is needed for reasonable performance.
+large_download_gb = estimated total download size in GB (app + models/data). null if unknown.
+license_restricts_commercial = true if the license (code or model weights) limits commercial
+use (e.g. CC-BY-NC, non-commercial clauses). false if fully permissive (MIT, Apache, CC-BY).
 If the pages do not clearly state it, use null — do NOT guess false.
 Return {{"facts": [...], "access": {{...}}, "name": tool name, "what_it_is": one sentence,
 "audience": who it is for}}.
@@ -172,6 +180,8 @@ ESTIMATE the time yourself from what you know about each step. Examples:
 - Browsing a gallery: "1 min". Signing up for a free account: "2 min".
 - Getting a paid subscription (Claude Pro, API key): "5 min".
 - Installing a CLI tool: "10 min". Running a code setup: "5-10 min".
+- Downloading large AI models (1-10 GB): "10-30 min".
+Include model/data downloads as a separate step if the tool needs them.
 NEVER say "not stated". Always estimate. 4-6 steps.
 
 "claims_table": Array of objects:
@@ -199,6 +209,8 @@ Shorts, stories, B-roll, tutorials? What's the most common use? Be specific.
 
 "bottom_line": 2-3 sentences. Would YOU make a reel about this? Direct answer: "Yes, make
 this reel because..." or "Skip it because...". No hedge language.
+If the tool requires a local install, GPU, or large download, say that explicitly as a barrier.
+If the license restricts commercial use, mention it.
 
 "risk_warnings": Array of 1-3 strings. Flag: self-reported numbers, security concerns
 (installs scripts, edits config files, downloads binaries), privacy issues, misleading
@@ -348,6 +360,26 @@ def _infer_access(access, facts):
             access["needs_account"] = False
         elif any(k in all_text for k in account_keywords):
             access["needs_account"] = True
+    if access.get("requires_install") is None:
+        install_keywords = ("download the app", "desktop app", "install the app",
+                            "electron app", "docker", ".dmg", ".exe", ".msi",
+                            "download for", "install on your")
+        if any(k in all_text for k in install_keywords):
+            access["requires_install"] = True
+    if access.get("requires_gpu") is None:
+        gpu_keywords = ("gpu", "cuda", "nvidia", "vram", "graphics card",
+                        "gpu acceleration", "gpu required")
+        if any(k in all_text for k in gpu_keywords):
+            access["requires_gpu"] = True
+    if access.get("license_restricts_commercial") is None:
+        restrict_keywords = ("non-commercial", "cc-by-nc", "cc by-nc", "nc license",
+                             "not for commercial", "personal use only")
+        permissive_keywords = ("mit license", "apache license", "apache-2.0", "mit",
+                               "bsd license", "cc-by ", "cc by 4")
+        if any(k in all_text for k in restrict_keywords):
+            access["license_restricts_commercial"] = True
+        elif any(k in all_text for k in permissive_keywords):
+            access["license_restricts_commercial"] = False
     if access.get("setup_minutes") is None:
         est = 5
         if access.get("paid_dependency"):
@@ -356,6 +388,11 @@ def _infer_access(access, facts):
             est += 10
         if access.get("needs_account"):
             est += 5
+        if access.get("requires_install"):
+            est += 10
+        dl = access.get("large_download_gb")
+        if isinstance(dl, (int, float)) and dl > 1:
+            est += int(dl * 5)
         access["setup_minutes"] = est
     return access
 
@@ -381,15 +418,16 @@ def stage_facts(llm, doc, today, reel_urls=None):
                       "category": raw.get("category", "other"), "status": status,
                       "origin": origin, "date": None}
     acc = out.get("access") or {}
+    _access_keys = ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
+                     "setup_minutes", "claims_free", "requires_install", "requires_gpu",
+                     "large_download_gb", "license_restricts_commercial")
     if not C.quote_in_text(acc.get("access_quote", ""), all_text):
         kept = {}
-        for k in ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
-                   "setup_minutes", "claims_free"):
+        for k in _access_keys:
             kept[k] = None
         acc = kept
     else:
-        for k in ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
-                   "setup_minutes", "claims_free"):
+        for k in _access_keys:
             acc.setdefault(k, None)
     acc = _infer_access(acc, facts)
     if doc["kind"] == "github":
@@ -632,7 +670,10 @@ def compute_scores(access, facts, research, today):
     fresh = sum(1 for d in dated if C.within_days(d, today, 30))
     b = C.browse_score(access.get("free_to_browse"), access.get("needs_account"))
     cr = C.create_score(access.get("paid_dependency"), access.get("needs_code"),
-                        access.get("setup_minutes"))
+                        access.get("setup_minutes"),
+                        requires_install=access.get("requires_install"),
+                        requires_gpu=access.get("requires_gpu"),
+                        license_restricts_commercial=access.get("license_restricts_commercial"))
     crowd = C.crowdedness(len(research["alternatives"]), research.get("search_ok", True))
     return {
         "browse": b["score"], "browse_reasons": b["reasons"],
@@ -644,6 +685,9 @@ def compute_scores(access, facts, research, today):
         "setup_minutes": access.get("setup_minutes"),
         "paid_dependency": access.get("paid_dependency"),
         "free_to_browse": access.get("free_to_browse"),
+        "requires_install": access.get("requires_install"),
+        "requires_gpu": access.get("requires_gpu"),
+        "license_restricts_commercial": access.get("license_restricts_commercial"),
     }
 
 
