@@ -256,118 +256,71 @@ def _format_result(r):
 
 st.set_page_config(page_title="Litmus", page_icon=":test_tube:", layout="centered")
 
-# ── ChatGPT-inspired dark theme ───────────────────────────────────
+# ── ChatGPT-inspired refinements (base dark theme via config.toml) ─
 st.markdown("""<style>
 /* Hide Streamlit chrome */
 #MainMenu, footer, header, .stDeployButton {display: none !important;}
 
-/* ── Dark main area ── */
-.stApp, .stApp > div, .main, .block-container {
-    background-color: #212121 !important;
-    color: #ececec !important;
-}
+/* Center chat content */
 .stMainBlockContainer {
     max-width: 48rem;
     margin: 0 auto;
     padding-top: 1rem;
 }
 
-/* ── Dark sidebar ── */
-section[data-testid="stSidebar"] {
-    background-color: #171717 !important;
-}
-section[data-testid="stSidebar"] *,
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] .stMarkdown p,
-section[data-testid="stSidebar"] .stMarkdown h3 {
-    color: #d1d1d1 !important;
-}
-section[data-testid="stSidebar"] .stButton > button {
-    background-color: #2a2a2a !important;
-    border: 1px solid #444 !important;
-    color: #d1d1d1 !important;
-    border-radius: 0.5rem !important;
-    font-size: 0.85rem !important;
-}
-section[data-testid="stSidebar"] .stButton > button:hover {
-    background-color: #3a3a3a !important;
-}
-section[data-testid="stSidebar"] .stSelectbox > div > div,
-section[data-testid="stSidebar"] .stTextInput > div > div > input {
-    background-color: #2a2a2a !important;
-    color: #d1d1d1 !important;
-    border-color: #444 !important;
-}
-section[data-testid="stSidebar"] hr {
-    border-color: #333 !important;
-}
-section[data-testid="stSidebar"] .stExpander {
-    border-color: #333 !important;
-}
-section[data-testid="stSidebar"] code {
-    background-color: #2a2a2a !important;
-    color: #d1d1d1 !important;
-}
-
-/* ── Typography ── */
+/* Clean font */
 body, .stMarkdown, .stChatMessage {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-}
-.stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th {
-    color: #d1d1d1 !important;
-}
-.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-    color: #ececec !important;
-}
-.stCaption, .stCaption p {
-    color: #9a9a9a !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif !important;
 }
 
-/* ── Chat messages ── */
+/* Chat messages — transparent bg like ChatGPT */
 .stChatMessage {
-    max-width: 48rem;
-    margin-left: auto;
-    margin-right: auto;
     background-color: transparent !important;
     border: none !important;
 }
 [data-testid="stChatMessageContent"] {
     background-color: transparent !important;
-    color: #d1d1d1 !important;
 }
 
-/* ── Chat input bar ── */
-.stChatInput {
-    background-color: #212121 !important;
-}
+/* Chat input — dark pill */
 .stChatInput > div {
     background-color: #303030 !important;
     border: 1px solid #444 !important;
     border-radius: 1.5rem !important;
 }
 .stChatInput textarea {
-    background-color: #303030 !important;
     color: #d1d1d1 !important;
-    border-radius: 1.5rem !important;
 }
-.stChatInput textarea::placeholder {
-    color: #8e8e8e !important;
+[data-testid="stBottom"] {
+    background-color: #212121 !important;
 }
 
-/* ── Expanders ── */
+/* Sidebar buttons */
+section[data-testid="stSidebar"] .stButton > button {
+    background-color: #2a2a2a !important;
+    border: 1px solid #444 !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.85rem !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background-color: #3a3a3a !important;
+}
+section[data-testid="stSidebar"] hr {
+    border-color: #333 !important;
+}
+section[data-testid="stSidebar"] code {
+    background-color: #2a2a2a !important;
+}
+
+/* Expanders */
 .stExpander {
     background-color: #2a2a2a !important;
     border: 1px solid #3a3a3a !important;
     border-radius: 0.5rem !important;
 }
-.stExpander summary, .stExpander summary span {
-    color: #d1d1d1 !important;
-}
 
-/* ── Tables ── */
-.stMarkdown table {
-    border-collapse: collapse;
-}
+/* Tables */
 .stMarkdown th {
     background-color: #2a2a2a !important;
     border-color: #444 !important;
@@ -376,46 +329,23 @@ body, .stMarkdown, .stChatMessage {
     border-color: #3a3a3a !important;
 }
 
-/* ── Status widget ── */
-[data-testid="stStatusWidget"] {
-    background-color: #2a2a2a !important;
-    border-color: #444 !important;
-}
-[data-testid="stStatusWidget"] * {
-    color: #d1d1d1 !important;
-}
-
-/* ── Buttons in main area ── */
+/* Buttons */
 .stButton > button {
     background-color: #303030 !important;
-    color: #d1d1d1 !important;
-    border: 1px solid #555 !important;
+    border: 1px solid #444 !important;
     border-radius: 0.5rem !important;
 }
 .stButton > button:hover {
     background-color: #404040 !important;
-    border-color: #666 !important;
 }
-
-/* ── Form submit button ── */
 .stFormSubmitButton > button {
     background-color: #303030 !important;
-    color: #d1d1d1 !important;
-    border: 1px solid #555 !important;
+    border: 1px solid #444 !important;
 }
 
-/* ── Select boxes & text inputs in main ── */
-.stSelectbox > div > div,
-.stTextInput > div > div > input {
-    background-color: #303030 !important;
-    color: #d1d1d1 !important;
-    border-color: #555 !important;
-}
-
-/* ── Alerts ── */
-.stAlert {
+/* Status widget */
+[data-testid="stStatusWidget"] {
     background-color: #2a2a2a !important;
-    color: #d1d1d1 !important;
     border-color: #444 !important;
 }
 </style>""", unsafe_allow_html=True)
