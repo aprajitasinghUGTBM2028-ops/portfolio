@@ -51,17 +51,60 @@ def _parse_input(text):
 
 
 def _format_result(r):
-    """Format analysis result as flowing markdown."""
+    """Format analysis result as flowing markdown matching the playbook standard."""
     sc = r["scores"]
     rpt = r["report"]
     lines = []
 
-    lines.append(f"### {C.esc(r['name'])} — {C.esc(r['verdict'])}")
-    lines.append(f"*{C.esc(r['verdict_rule'])}*")
-    lines.append("")
+    # Title: just the name + what it is
+    lines.append(f"### {C.esc(r['name'])}")
     lines.append(f"**{C.esc(r['what_it_is'])}**")
     lines.append("")
 
+    # Summary
+    if rpt.get("summary"):
+        lines.append(C.esc(rpt["summary"]))
+        lines.append("")
+
+    # Tryability split
+    tryability = rpt.get("tryability") or {}
+    if any(tryability.get(k) for k in ("the_site", "the_tool", "time_to_result")):
+        lines.append("**Tryability**")
+        if tryability.get("the_site"):
+            lines.append(f"- The site: {C.esc(tryability['the_site'])}")
+        if tryability.get("the_tool"):
+            lines.append(f"- The tool: {C.esc(tryability['the_tool'])}")
+        if tryability.get("time_to_result"):
+            lines.append(f"- Time to first result: {C.esc(tryability['time_to_result'])}")
+        lines.append("")
+
+    # Setup steps with time estimates
+    steps = rpt.get("setup_steps") or []
+    if steps:
+        lines.append("**Setup time:** ~{} min estimated".format(
+            sc.get("setup_minutes") or sum(
+                int("".join(c for c in str(s.get("time", "5")) if c.isdigit()) or "5")
+                for s in steps)))
+        for i, step in enumerate(steps, 1):
+            t = step.get("time", "")
+            lines.append(f"- Step {i}: {C.esc(step.get('step', ''))} ({C.esc(t)} min)")
+        lines.append("")
+    else:
+        sm = sc.get("setup_minutes")
+        lines.append(f"**Setup time:** ~{sm} min estimated" if sm else "**Setup time:** ~5 min estimated")
+        lines.append("")
+
+    # Paid dependency
+    pd = sc.get("paid_dependency")
+    if pd is True:
+        lines.append("**Paid dependency:** Yes — needs a paid service")
+    elif pd is None:
+        lines.append("**Paid dependency:** Unknown")
+    else:
+        lines.append("**Paid dependency:** No")
+    lines.append("")
+
+    # Scores table
     br = "; ".join(sc.get("browse_reasons", [])) or "no issues"
     cr = "; ".join(sc.get("create_reasons", [])) or "no issues"
     lines.append("| Metric | Score | Why |")
@@ -72,47 +115,111 @@ def _format_result(r):
     lines.append(f"| Independent sources | {sc['n_independent']} | — |")
     lines.append("")
 
-    pd = sc.get("paid_dependency")
-    if pd is True:
-        lines.append("**Paid dependency:** Yes — needs a paid service")
-    elif pd is None:
-        lines.append("**Paid dependency:** Unknown — page does not clearly state")
-    else:
-        lines.append("**Paid dependency:** No")
+    # How people are using it
+    if rpt.get("how_people_use_it"):
+        lines.append("**How people are using it**")
+        lines.append(C.esc(rpt["how_people_use_it"]))
+        lines.append("")
 
-    sm = sc.get("setup_minutes")
-    lines.append(f"**Setup time:** {'~' + str(sm) + ' min' if sm is not None else 'not stated'}")
-    lines.append("")
+    # Claims table (confirmed vs cannot confirm)
+    ct = rpt.get("claims_table") or []
+    if ct:
+        confirmed = [c for c in ct if c.get("status") == "confirmed"]
+        cannot = [c for c in ct if c.get("status") != "confirmed"]
+        lines.append("**Claims**")
+        lines.append("| Confirmed | Cannot confirm |")
+        lines.append("|---|---|")
+        max_rows = max(len(confirmed), len(cannot))
+        for i in range(max_rows):
+            left = ""
+            right = ""
+            if i < len(confirmed):
+                left = f"{C.esc(confirmed[i].get('claim', ''))} — {C.esc(confirmed[i].get('detail', ''))}"
+            if i < len(cannot):
+                right = f"{C.esc(cannot[i].get('claim', ''))} — {C.esc(cannot[i].get('detail', ''))}"
+            lines.append(f"| {left} | {right} |")
+        lines.append("")
 
-    lines.append(f"**Summary:** {C.esc(rpt['summary'])}")
-    lines.append("")
+    # Virality scorecard
+    vs = rpt.get("virality_scorecard") or []
+    if vs:
+        lines.append("**Virality scorecard**")
+        lines.append("| Dimension | Score | Why |")
+        lines.append("|---|---|---|")
+        for item in vs:
+            dim = C.esc(item.get("dimension", ""))
+            score = item.get("score", "?")
+            mx = item.get("max", 10)
+            reason = C.esc(item.get("reason", ""))
+            lines.append(f"| {dim} | {score}/{mx} | {reason} |")
+        lines.append("")
 
+    if rpt.get("why_viral"):
+        lines.append(f"**Why it could go viral:** {C.esc(rpt['why_viral'])}")
+    if rpt.get("why_not_viral"):
+        lines.append(f"**Why it might not:** {C.esc(rpt['why_not_viral'])}")
+    if rpt.get("why_viral") or rpt.get("why_not_viral"):
+        lines.append("")
+
+    # Quick start
     if rpt.get("quick_start"):
         lines.append("**Quick start**")
         for i, step in enumerate(rpt["quick_start"], 1):
             lines.append(f"{i}. {C.esc(step)}")
         lines.append("")
 
+    # Content hooks
     if rpt.get("hooks"):
         lines.append("**Content hooks**")
         for h in rpt["hooks"]:
             lines.append(f"- **[{C.esc(h['type'])}]** {C.esc(h['text'])}")
         lines.append("")
 
+    # Reel structure
+    rs = rpt.get("reel_structure") or {}
+    if any(rs.get(k) for k in ("hook_0_2s", "demo_2_8s", "reveal_8_15s", "cta_15_20s")):
+        lines.append("**Reel structure (20 sec)**")
+        if rs.get("hook_0_2s"):
+            lines.append(f"- 0-2s: {C.esc(rs['hook_0_2s'])}")
+        if rs.get("demo_2_8s"):
+            lines.append(f"- 2-8s: {C.esc(rs['demo_2_8s'])}")
+        if rs.get("reveal_8_15s"):
+            lines.append(f"- 8-15s: {C.esc(rs['reveal_8_15s'])}")
+        if rs.get("cta_15_20s"):
+            lines.append(f"- 15-20s: {C.esc(rs['cta_15_20s'])}")
+        lines.append("")
+
+    # Risk warnings
+    rw = rpt.get("risk_warnings") or []
+    if rw:
+        lines.append("**Risk warnings**")
+        for w in rw:
+            lines.append(f"- {C.esc(w)}")
+        lines.append("")
+
+    # Bottom line
     if rpt.get("bottom_line"):
         lines.append(f"**Bottom line:** {C.esc(rpt['bottom_line'])}")
-    if rpt.get("virality_notes"):
-        lines.append(f"**Virality:** {C.esc(rpt['virality_notes'])}")
-    if rpt.get("uniqueness"):
-        lines.append(f"**Uniqueness:** {C.esc(rpt['uniqueness'])}")
+        lines.append("")
+
+    # Distinct angle
     if rpt.get("distinct_angle"):
         lines.append(f"**Distinct angle:** {C.esc(rpt['distinct_angle']['text'])}")
+        lines.append("")
+
+    # Alternatives
     if r["research"].get("alternatives"):
         lines.append(f"**Alternatives:** {', '.join(C.esc(a) for a in r['research']['alternatives'])}")
 
+    # Platforms searched
     if r["research"].get("platforms"):
         plat = ", ".join(f"{k} ({v})" for k, v in r["research"]["platforms"].items())
         lines.append(f"**Searched on:** {plat}")
+
+    # Source list
+    sl = rpt.get("sources_list") or []
+    if sl:
+        lines.append(f"**Sources:** {', '.join(C.esc(s) for s in sl)}")
 
     return "\n".join(lines)
 
@@ -261,6 +368,7 @@ if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add cap
         if r["research"].get("lookalikes"):
             evidence_lines.append(f"**Lookalike domains:** {', '.join(C.esc(d) for d in r['research']['lookalikes'])}")
         evidence_lines.append(f"Models used: {', '.join(r.get('models', []))}")
+        evidence_lines.append(f"Verdict: {C.esc(r['verdict'])} — {C.esc(r['verdict_rule'])}")
         evidence_text = "\n\n".join(evidence_lines)
 
         with st.expander("Evidence detail"):

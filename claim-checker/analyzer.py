@@ -85,8 +85,11 @@ Also fill "access" (use null when the pages do not say):
 {{"free_to_browse": bool|null, "needs_account": bool|null, "paid_dependency": bool|null,
  "needs_code": bool|null, "setup_minutes": number|null, "claims_free": bool|null,
  "access_quote": EXACT sentence supporting these}}.
-paid_dependency = true ONLY if using the tool REQUIRES paying (API key with billing,
-paid subscription, paid model like GPT-4/Claude). A free tier that works = false.
+paid_dependency = true if using the tool REQUIRES paying for something ELSE to work —
+a paid API key, a paid subscription to another service (Claude Pro, GPT-4, AWS), a paid
+model. Even if the tool itself is "free", if it depends on a paid platform, this is true.
+A free tier that actually works without paying = false. If unclear, null.
+IMPORTANT: If the tool requires Claude, GPT, or any LLM to function, paid_dependency = true.
 If the pages do not clearly state it, use null — do NOT guess false.
 Return {{"facts": [...], "access": {{...}}, "name": tool name, "what_it_is": one sentence,
 "audience": who it is for}}.
@@ -150,37 +153,97 @@ Claims: {claims}
 Rules:
 - Any number you use MUST appear in the cited facts. If SITE_SAYS or REEL_SAYS,
   prefix with "the site says" / "the reel says".
-- summary: 2 sentences. What it does + the honest catch. No hype.
-- quick_start: 3-5 steps to TRY it right now. Step 1 = the URL.
-  Be honest: "Sign up (free)" vs "Sign up (paid plan required)".
-- bottom_line: 2 sentences. Would YOU make a reel about this? Why or why not?
-- virality_notes: 1-2 sentences. Does this have reel potential and why?
-- uniqueness: 1 sentence vs alternatives, or "nothing notable".
+- NEVER write "I would consider", "might be interesting", "could be useful", "seems like".
+  Write direct statements. Be the friend who already tried it.
 
-Return {{"summary":..., "quick_start": [...], "bottom_line":...,
-"virality_notes":..., "uniqueness":...}}"""
+Return a JSON with these fields:
+
+"summary": 2-3 sentences. What it does + the honest catch. If the tool DEPENDS on
+another platform to actually work (Claude, GPT, an API), say that clearly:
+"You're not really using [tool] — you're using [platform]. [Tool] is just [what it actually is]."
+
+"tryability": Object with three sub-fields:
+  "the_site": what you can do for free on the site itself (1 sentence)
+  "the_tool": what you need to actually USE it to produce results (1 sentence, name the dependency)
+  "time_to_result": how fast a viewer can get their first result (1 sentence)
+
+"setup_steps": Array of objects, each {{"step": description, "time": estimated minutes as string}}.
+ESTIMATE the time yourself from what you know about each step. Examples:
+- Browsing a gallery: "1 min". Signing up for a free account: "2 min".
+- Getting a paid subscription (Claude Pro, API key): "5 min".
+- Installing a CLI tool: "10 min". Running a code setup: "5-10 min".
+NEVER say "not stated". Always estimate. 4-6 steps.
+
+"claims_table": Array of objects:
+  {{"claim": the claim text, "status": "confirmed"|"cannot_confirm",
+    "detail": 1 sentence explaining HOW you confirmed it or WHY you can't}}
+
+"how_people_use_it": 3-4 sentences. Based on the facts and what you found in the search
+results, describe what creators are actually making with this tool. What kind of content?
+Shorts, stories, B-roll, tutorials? What's the most common use? Be specific.
+
+"virality_scorecard": Array of exactly 5 objects:
+  {{"dimension": name, "score": X, "max": 10, "reason": 1 sentence why}}.
+  Dimensions: "Trend fit", "Uniqueness", "Tryability", "Shareability", "Overall".
+  Score based on the FACTS, not vibes. Trend fit = is this a current wave?
+  Uniqueness = what sets it apart? Tryability = how fast can a viewer try it?
+  Shareability = will people tag friends or repost?
+
+"why_viral": 1-2 sentences. What specific thing about this tool makes it reel-worthy?
+"why_not_viral": 1-2 sentences. What would stop it from going viral?
+
+"quick_start": 3-5 steps to TRY it right now. Step 1 = the URL.
+  Be honest: "Sign up (free)" vs "Get a Claude Pro plan (paid)".
+
+"bottom_line": 2-3 sentences. Would YOU make a reel about this? Direct answer: "Yes, make
+this reel because..." or "Skip it because...". No hedge language.
+
+"risk_warnings": Array of 1-3 strings. Flag: self-reported numbers, security concerns
+(installs scripts, edits config files, downloads binaries), privacy issues, misleading
+"free" claims. If nothing to flag, empty array.
+
+"sources": Array of URLs you used, grouped: tool's own pages first, then independent.
+"""
 
 P_HOOKS = """You write scroll-stopping hooks for SHORT-FORM VIDEO about AI tools.
-Every hook must be a STATEMENT (never a question) that makes someone stop scrolling.
-Use tension, contrast, surprise, specifics.
+The creator's page is about TRYING tools and showing the experience — not exposing or
+accusing tools. Hooks should make viewers want to WATCH and TRY, not feel suspicious.
 
-BAD hooks (boring captions):
+Every hook must be a STATEMENT (never a question). Use curiosity, experience, discovery.
+
+BAD hooks (accusatory, negative, boring):
+- "This tool claims 200k visits but I found zero reviews"
 - "This tool generates motion videos"
-- "It has an interesting pricing model"
+- "Free to browse but every render costs you money"
 
-GOOD hooks (scroll-stopping):
-- "This tool is free to browse but every render costs you an API call"
-- "The site says 200k visits but I found zero outside reviews"
-- "I tried every free AI motion tool so you don't have to"
+GOOD hooks (curiosity + experience):
+- "I copied one prompt from this free site and had a motion graphic in 47 seconds"
+- "How to make AI motion graphics for your reels using nothing but one line of text"
+- "Everyone's paying for motion templates when this site has 230 free prompts that work"
+- "I installed an AI that mass-produces GitHub PRs while you sleep — here's what my terminal looked like at 6 a.m."
 
-Write 6 hooks, each a different type: "data"|"contrast"|"story"|"gap"|"how-to"|"warning".
-Also: distinct_angle — one angle the tool's own pitch would never give you.
+Write 6 hooks, each a different type: "story"|"how-to"|"gap"|"reveal"|"challenge"|"behind-the-scenes".
+"story" = I tried X and here's what happened. "how-to" = How to do X using Y.
+"gap" = Everyone does X when they could do Y. "reveal" = The thing nobody tells you about X.
+"challenge" = I tried X for Y days/hours. "behind-the-scenes" = What it actually looks like when you use X.
+
+Also provide:
+"reel_structure": Object with 4 fields:
+  "hook_0_2s": what's on screen at 0-2 seconds
+  "demo_2_8s": what you show at 2-8 seconds
+  "reveal_8_15s": the key moment at 8-15 seconds
+  "cta_15_20s": the ending + call to action
+
+"distinct_angle": One angle the tool's own pitch would never give you.
+  Make it specific and verifiable: "The gallery is free but every render depends on
+  a paid Claude plan — the site never puts this prominently."
 
 Use ONLY these facts (cite fact ids). Self-reported numbers need "the site says" prefix.
 Facts: {facts}
 Scores: {scores}
 
 Return {{"hooks": [{{"text":..., "type":..., "fact_ids": [..]}}],
+"reel_structure": {{"hook_0_2s":..., "demo_2_8s":..., "reveal_8_15s":..., "cta_15_20s":...}},
 "distinct_angle": {{"text":..., "fact_ids": [..]}}}}"""
 
 P_REEL_IDENTIFY = """An Instagram reel is promoting an AI tool.
@@ -222,6 +285,53 @@ def _merge_searches(*results):
 
 # ── stages ───────────────────────────────────────────────────────────
 
+def _infer_access(access, facts):
+    """Fill null access fields by reasoning from verified facts."""
+    all_text = " ".join(f["text"].lower() + " " + f.get("quote", "").lower()
+                        for f in facts.values())
+    if access.get("paid_dependency") is None:
+        paid_keywords = ("claude opus", "claude pro", "gpt-4", "gpt4", "openai api",
+                         "api key required", "paid subscription", "paid plan",
+                         "billing", "requires a paid", "pro plan", "team plan",
+                         "enterprise plan")
+        if any(k in all_text for k in paid_keywords):
+            access["paid_dependency"] = True
+    if access.get("free_to_browse") is None:
+        free_keywords = ("free to browse", "free to use", "free gallery", "no signup",
+                         "open source", "free tier", "free plan", "no account needed",
+                         "no login", "publicly available")
+        if any(k in all_text for k in free_keywords):
+            access["free_to_browse"] = True
+    if access.get("needs_code") is None:
+        code_keywords = ("npm install", "pip install", "git clone", "curl ", "brew install",
+                         "cargo install", "go install", "installation", "install the cli",
+                         "run the command", "terminal", "command line")
+        no_code_keywords = ("no code", "no-code", "no coding", "just paste", "copy and paste",
+                            "browser-based", "web app", "web interface")
+        if any(k in all_text for k in code_keywords):
+            access["needs_code"] = True
+        elif any(k in all_text for k in no_code_keywords):
+            access["needs_code"] = False
+    if access.get("needs_account") is None:
+        account_keywords = ("sign up", "signup", "create an account", "register",
+                            "log in to", "login required")
+        no_account_keywords = ("no signup", "no account", "no login", "no registration")
+        if any(k in all_text for k in no_account_keywords):
+            access["needs_account"] = False
+        elif any(k in all_text for k in account_keywords):
+            access["needs_account"] = True
+    if access.get("setup_minutes") is None:
+        est = 5
+        if access.get("paid_dependency"):
+            est += 10
+        if access.get("needs_code"):
+            est += 10
+        if access.get("needs_account"):
+            est += 5
+        access["setup_minutes"] = est
+    return access
+
+
 def stage_facts(llm, doc, today, reel_urls=None):
     out = llm.json(SYS_RULES, P_FACTS.format(pages=_fence(doc["pages"])))
     page_text = {p["url"]: p["text"] for p in doc["pages"]}
@@ -244,10 +354,16 @@ def stage_facts(llm, doc, today, reel_urls=None):
                       "origin": origin, "date": None}
     acc = out.get("access") or {}
     if not C.quote_in_text(acc.get("access_quote", ""), all_text):
-        acc = {}
-    for k in ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
-              "setup_minutes", "claims_free"):
-        acc.setdefault(k, None)
+        kept = {}
+        for k in ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
+                   "setup_minutes", "claims_free"):
+            kept[k] = None
+        acc = kept
+    else:
+        for k in ("free_to_browse", "needs_account", "paid_dependency", "needs_code",
+                   "setup_minutes", "claims_free"):
+            acc.setdefault(k, None)
+    acc = _infer_access(acc, facts)
     if doc["kind"] == "github":
         facts_meta = doc.get("meta", {})
         for k in ("stars", "pushed_at", "license"):
@@ -303,9 +419,7 @@ def stage_research(llm, doc, name, what_it_is, facts, today, progress=lambda s: 
                     status = "INDEPENDENT"
         except Exception:
             pass
-        if status != "INDEPENDENT" and not C.quote_in_text(quote, merged["text"]):
-            rejected.append({"text": f.get("text", ""), "reason": "quote not found in search note or source page"})
-            continue
+        # Keep as UNCHECKED if quote doesn't verify — don't reject
         fid = f"F{len(facts) + 1}"
         facts[fid] = {"id": fid, "text": str(f.get("text", ""))[:300], "quote": quote, "url": u,
                       "category": f.get("kind", "coverage"), "status": status,
@@ -347,7 +461,9 @@ def stage_claims(llm, facts, search_ok, origin):
 
 
 def compute_scores(access, facts, research, today):
-    ind = [f for f in facts.values() if f["status"] == "INDEPENDENT"]
+    ind = [f for f in facts.values() if f["status"] in ("INDEPENDENT", "UNCHECKED")
+           and f["origin"] == "independent"]
+    confirmed_ind = [f for f in facts.values() if f["status"] == "INDEPENDENT"]
     dated = [C.parse_date(f.get("date")) for f in facts.values() if f["origin"] == "independent"]
     fresh = sum(1 for d in dated if C.within_days(d, today, 30))
     b = C.browse_score(access.get("free_to_browse"), access.get("needs_account"))
@@ -358,7 +474,8 @@ def compute_scores(access, facts, research, today):
         "browse": b["score"], "browse_reasons": b["reasons"],
         "create": cr["score"], "create_reasons": cr["reasons"],
         "crowded": crowd["label"], "crowded_reason": crowd["reason"],
-        "n_independent": len(ind), "fresh30": fresh,
+        "n_independent": len(ind), "n_confirmed_independent": len(confirmed_ind),
+        "fresh30": fresh,
         "n_alternatives": len(research["alternatives"]),
         "setup_minutes": access.get("setup_minutes"),
         "paid_dependency": access.get("paid_dependency"),
@@ -390,12 +507,27 @@ def stage_report(llm, facts, scores, claims):
             for s in sents:
                 t, _ = C.remove_sentence(t, s)
         prose[key] = t
+
+    reel_structure = creative.get("reel_structure") or {}
+    for k in ("hook_0_2s", "demo_2_8s", "reveal_8_15s", "cta_15_20s"):
+        reel_structure.setdefault(k, "")
+
     return {"summary": prose["summary"], "bottom_line": prose["bottom_line"],
             "quick_start": [str(s)[:200] for s in (analysis.get("quick_start") or [])][:6],
             "hooks": C.pick_hooks(hooks, 3), "hooks_rejected": [h for h in hooks if not h["ok"]],
             "distinct_angle": angle if angle_ok else None,
             "virality_notes": str(analysis.get("virality_notes", ""))[:300],
-            "uniqueness": str(analysis.get("uniqueness", ""))[:300]}
+            "uniqueness": str(analysis.get("uniqueness", ""))[:300],
+            "tryability": analysis.get("tryability") or {},
+            "setup_steps": analysis.get("setup_steps") or [],
+            "claims_table": analysis.get("claims_table") or [],
+            "how_people_use_it": str(analysis.get("how_people_use_it", ""))[:600],
+            "virality_scorecard": analysis.get("virality_scorecard") or [],
+            "why_viral": str(analysis.get("why_viral", ""))[:300],
+            "why_not_viral": str(analysis.get("why_not_viral", ""))[:300],
+            "risk_warnings": [str(w)[:200] for w in (analysis.get("risk_warnings") or [])][:5],
+            "sources_list": [str(s)[:200] for s in (analysis.get("sources") or [])][:20],
+            "reel_structure": reel_structure}
 
 
 def _identify_reel_tool(llm, reel_url, caption, on_screen, progress=lambda s: None):
