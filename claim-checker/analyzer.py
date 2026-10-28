@@ -780,13 +780,24 @@ def _identify_reel_tool(llm, reel_url, caption, on_screen, progress=lambda s: No
 
 
 def _caption_is_multi_tool(text):
-    """Detect if a caption lists multiple tools (numbered list, bullet list, etc.)."""
+    """Detect if a caption lists multiple tools (numbered list, bullet list, emoji numbers, etc.)."""
     lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
-    numbered = sum(1 for l in lines if re.match(r"^\d+[\.\)]\s", l))
+    numbered = sum(1 for l in lines if re.match(r"^\d+[\.\):\-]\s", l))
     if numbered >= 3:
         return True
-    bulleted = sum(1 for l in lines if l.startswith(("- ", "• ", "* ")))
+    bulleted = sum(1 for l in lines if l.startswith(("- ", "• ", "* ", "→ ", "▸ ")))
     if bulleted >= 3:
+        return True
+    emoji_num = sum(1 for l in lines if re.match(r"^[\U00000030-\U00000039]️?⃣", l))
+    if emoji_num >= 3:
+        return True
+    header = text[:200].lower()
+    if re.search(r"\b(\d+)\s+(tools?|repos?|repositories|alternatives|apps?|software|projects?)", header):
+        n = int(re.search(r"\b(\d+)\s+(tools?|repos?|repositories|alternatives|apps?|software|projects?)", header).group(1))
+        if n >= 3 and len(lines) >= n:
+            return True
+    tool_like = sum(1 for l in lines if re.match(r"^[A-Z][\w.]+\s*[—\-–:]\s", l))
+    if tool_like >= 3:
         return True
     return False
 
