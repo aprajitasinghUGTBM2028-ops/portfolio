@@ -29,16 +29,16 @@ mcp = FastMCP("Litmus",
 
 
 @mcp.tool()
-def analyze_hype_claim(
+def litmus_test(
     url: str,
     budget: str = "Free only",
     experience: str = "Non-technical",
 ) -> str:
-    """Analyze an AI tool URL for hype vs reality.
+    """Litmus — Test the Promise. Fact-checks an AI tool URL for hype vs reality.
 
-    Fetches the page, extracts facts, verifies quotes against source text,
-    searches Reddit/HN/X/YouTube for independent evidence, cross-verifies
-    findings, and returns a scored, evidence-linked report.
+    Runs a 9-step pipeline: fetches the page, extracts facts, verifies quotes
+    against source text, searches Reddit/HN/X/YouTube for independent evidence,
+    cross-verifies findings, and returns a scored, evidence-linked report.
 
     Args:
         url: The tool's URL (website or GitHub repo)
