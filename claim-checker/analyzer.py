@@ -145,8 +145,11 @@ Allowed URLs: {urls}
 {note}
 </data>"""
 
-P_CLAIMS = """List the tool's 4-7 most important marketing claims and link each to the facts
+P_CLAIMS = """List the tool's 4-8 most important marketing claims and link each to the facts
 that support or contradict it, using fact ids only.
+If the source (reel caption, site) lists specific features or capabilities for specific
+components (e.g. "Sales: preps your calls", "Legal: flags clauses"), extract each one as
+a SEPARATE claim — do not merge them into a single summary like "has 11 plugins".
 Facts: {facts}
 Return {{"claims": [{{"text":..., "category": "capability"|"pricing"|"performance"|"popularity",
 "supports": ["F1"], "contradicts": []}}]}}"""
