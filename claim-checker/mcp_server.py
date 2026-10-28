@@ -3,7 +3,7 @@
 Install: pip install mcp
 Run:     python mcp_server.py
 
-Claude Desktop config (~/.claude/claude_desktop_config.json):
+Claude Desktop config (Windows: %APPDATA%\Claude\claude_desktop_config.json):
 {
   "mcpServers": {
     "litmus": {
