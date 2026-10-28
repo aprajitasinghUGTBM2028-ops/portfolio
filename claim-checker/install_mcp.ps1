@@ -69,5 +69,5 @@ Write-Host "`nConfig written to: $configFile" -ForegroundColor Green
 
 Write-Host "`n=== Done! ===" -ForegroundColor Cyan
 Write-Host "Now restart Claude Desktop completely (quit from system tray, then reopen)."
-Write-Host "The 'analyze_hype_claim' tool will appear in Claude Desktop."
+Write-Host "The 'litmus_test' tool will appear in Claude Desktop."
 Write-Host "`nTest it by asking Claude: 'Analyze this tool: https://github.com/anthropics/knowledge-work-plugins'"
