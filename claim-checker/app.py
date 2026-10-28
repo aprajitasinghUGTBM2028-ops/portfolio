@@ -248,6 +248,28 @@ if not _key:
 st.title("AI Hype Claim Checker")
 st.caption("Paste a tool URL. I'll search Reddit, HN, X, YouTube, LinkedIn, and more to check what's real.")
 
+# ── User context (asked once per session) ────────────────────────────
+
+if "user_context" not in st.session_state:
+    st.session_state.user_context = None
+
+with st.sidebar:
+    if st.session_state.user_context is None:
+        st.markdown("**Quick setup** (one time)")
+        with st.form("user_context_form"):
+            budget = st.selectbox("Your budget", ["Free only", "Under $20/mo", "Under $50/mo", "Flexible"])
+            experience = st.selectbox("Technical level", ["Non-technical", "Some coding", "Developer"])
+            use_case = st.selectbox("Content for", ["Instagram Reels", "YouTube Shorts", "TikTok", "All platforms"])
+            if st.form_submit_button("Save"):
+                st.session_state.user_context = {"budget": budget, "experience": experience, "use_case": use_case}
+                st.rerun()
+    else:
+        ctx = st.session_state.user_context
+        st.markdown(f"**You:** {ctx['experience']} · {ctx['budget']} · {ctx['use_case']}")
+        if st.button("Edit profile"):
+            st.session_state.user_context = None
+            st.rerun()
+
 # ── Chat state ───────────────────────────────────────────────────────
 
 if "messages" not in st.session_state:
@@ -308,7 +330,8 @@ if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add cap
         with st.status("Analyzing...", expanded=True) as status_box:
             try:
                 r = analyzer.analyze(url, analyzer.OpenAILLM(_key), caption, on_screen,
-                                     progress=lambda s: status_box.write(s))
+                                     progress=lambda s: status_box.write(s),
+                                     user_context=st.session_state.get("user_context"))
             except Exception as e:
                 status_box.update(label="Error", state="error")
                 err = C.redact_secrets(str(e))
@@ -354,6 +377,8 @@ if prompt := st.chat_input("Paste a tool URL (e.g. prompt-motion.com) or add cap
                 st.markdown(f"{ic} **{C.esc(f['status'])}** — {C.esc(f['text'])}")
 
         evidence_lines = []
+        if r.get("investigation", {}).get("investigated"):
+            evidence_lines.append(f"**Conditional branches run:** {', '.join(r['investigation']['investigated'])}")
         if r.get("dropped_facts"):
             evidence_lines.append(f"**Rejected facts (quote not on page):** {len(r['dropped_facts'])}")
         if r["research"].get("rejected"):

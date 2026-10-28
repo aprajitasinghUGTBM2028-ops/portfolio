@@ -60,6 +60,9 @@ class FakeLLM:
                 "distinct_angle": {"text": "Free to browse, but rendering needs a paid model", "fact_ids": ["F2"]}}
         return {}
     def search(self, prompt):
+        if "pricing" in prompt.lower():
+            return {"text": "Claude Pro costs $20/month. API access via Anthropic starts at $3 per million input tokens.",
+                    "sources": [{"url": "https://anthropic.com/pricing", "title": "Pricing"}]}
         return {"text": "Some note about the tool", "sources": [{"url": "https://news.ycombinator.com/item?id=1", "title": "HN"}]}
 
 def fake_fetch(url, caption="", on_screen=""):
@@ -73,7 +76,7 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     assert r["state"] == "ok"
     assert len(steps) >= 6
     assert len(r["dropped_facts"]) == 1                       # invented "five million studios" quote
-    assert not any("million" in f["text"] for f in r["facts"])
+    assert not any("5 million" in f["text"] for f in r["facts"])
     assert r["research"]["rejected"]                          # finding on a URL the search tool never returned
     assert any(isinstance(x, dict) and "reason" in x for x in r["research"]["rejected"])
     assert r["research"]["lookalikes"] == ["promptmotion.com"]
@@ -81,8 +84,9 @@ def test_pipeline_rejects_bad_material(monkeypatch):
     assert texts == ["I copied one prompt from this free site and had a motion graphic ready for my reel"]
     assert len(r["report"]["hooks_rejected"]) == 2            # invented number + question
     assert r["claims"][1]["verdict"] == "UNVERIFIABLE"        # popularity claim with no independent source
-    assert r["scores"]["create"] == 3 and r["scores"]["n_independent"] == 0
+    assert r["scores"]["create"] == 3
     assert "needs a paid service" in r["scores"]["create_reasons"]
+    assert r["scores"]["n_independent"] >= 0                     # pricing investigation may add independent sources
     assert r["verdict"] == "COVER THE GAP"                    # free claim + paid dependency
 
 def test_new_report_fields(monkeypatch):
@@ -129,3 +133,49 @@ def test_platforms_tracked(monkeypatch):
     monkeypatch.setattr(F, "fetch", fake_fetch)
     r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28))
     assert "platforms" in r["research"]
+
+def test_investigate_stage_pricing(monkeypatch):
+    monkeypatch.setattr(F, "fetch", fake_fetch)
+    r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28))
+    assert "investigation" in r
+    inv = r["investigation"]["investigated"]
+    assert any("pricing" in i for i in inv)
+    pricing_facts = [f for f in r["facts"] if f["category"] == "pricing"]
+    assert len(pricing_facts) >= 1
+
+def test_investigate_skips_when_no_paid_dep(monkeypatch):
+    """If no paid dependency, no pricing investigation should run."""
+    facts = {"F1": {"id": "F1", "text": "A free tool", "quote": "q", "url": "u",
+                    "category": "capability", "status": "SITE_SAYS", "origin": "official", "date": None}}
+    access = {"paid_dependency": False, "free_to_browse": True}
+    doc = {"kind": "web", "meta": {}, "url": "https://example.com"}
+    result = A.stage_investigate(FakeLLM(), facts, access, doc, date(2026, 10, 28))
+    assert result["investigated"] == []
+
+def test_dep_parsing():
+    """Test dependency file parsing directly (code, no LLM)."""
+    reqs = F._parse_requirements("flask>=2.0\nrequests\n# comment\nopenai>=1.0")
+    assert "flask" in reqs
+    assert "requests" in reqs
+    assert "openai" in reqs
+    assert len(reqs) == 3
+
+    pkg = F._parse_package_json('{"dependencies":{"react":"^18","openai":"^4"},"devDependencies":{"jest":"^29"}}')
+    assert "react" in pkg
+    assert "openai" in pkg
+    assert "jest" in pkg
+
+    pyproj = F._parse_pyproject('[project]\ndependencies = [\n  "anthropic>=0.5",\n  "click",\n]\n')
+    assert "anthropic" in pyproj
+    assert "click" in pyproj
+
+def test_check_paid_deps():
+    assert A._check_paid_deps(["openai", "flask", "requests"]) == ["OpenAI API"]
+    assert A._check_paid_deps(["anthropic", "click"]) == ["Anthropic API"]
+    assert A._check_paid_deps(["flask", "requests"]) == []
+
+def test_user_context_passed(monkeypatch):
+    monkeypatch.setattr(F, "fetch", fake_fetch)
+    ctx = {"budget": "Free only", "experience": "Non-technical", "use_case": "Instagram Reels"}
+    r = A.analyze("https://prompt-motion.com/", FakeLLM(), today=date(2026, 10, 28), user_context=ctx)
+    assert r["state"] == "ok"

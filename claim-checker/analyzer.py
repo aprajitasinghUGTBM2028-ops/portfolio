@@ -246,6 +246,10 @@ Return {{"hooks": [{{"text":..., "type":..., "fact_ids": [..]}}],
 "reel_structure": {{"hook_0_2s":..., "demo_2_8s":..., "reveal_8_15s":..., "cta_15_20s":...}},
 "distinct_angle": {{"text":..., "fact_ids": [..]}}}}"""
 
+P_PRICING = """Search for the current pricing of "{service}".
+Find: free tier limits, paid plan costs, API pricing per call or per token.
+Report the cheapest way to actually use it. Today is {today}."""
+
 P_REEL_IDENTIFY = """An Instagram reel is promoting an AI tool.
 Reel URL: {reel_url}
 {reel_text}
@@ -448,6 +452,99 @@ def stage_research(llm, doc, name, what_it_is, facts, today, progress=lambda s: 
             "rejected": rejected, "sources": allowed, "platforms": platforms}
 
 
+def _detect_paid_services(facts):
+    """Detect which paid services are mentioned in facts."""
+    paid_map = {
+        "claude": "Anthropic Claude", "anthropic": "Anthropic Claude",
+        "gpt-4": "OpenAI GPT-4", "gpt4": "OpenAI GPT-4", "openai": "OpenAI",
+        "midjourney": "Midjourney", "dall-e": "DALL-E",
+        "stability": "Stability AI", "replicate": "Replicate",
+        "gemini": "Google Gemini",
+    }
+    all_text = " ".join(f["text"].lower() for f in facts.values())
+    seen, services = set(), []
+    for keyword, name in paid_map.items():
+        if keyword in all_text and name not in seen:
+            services.append(name)
+            seen.add(name)
+    return services
+
+
+def _check_paid_deps(dep_names):
+    """Check if any dependency names indicate a paid API."""
+    paid_indicators = {
+        "openai": "OpenAI API", "anthropic": "Anthropic API",
+        "cohere": "Cohere API", "replicate": "Replicate API",
+        "stability-sdk": "Stability AI", "midjourney": "Midjourney",
+        "google-generativeai": "Google Gemini API",
+        "google-cloud-aiplatform": "Google Vertex AI",
+    }
+    found = []
+    for dep in dep_names:
+        dep_lower = dep.lower().replace("_", "-")
+        for indicator, name in paid_indicators.items():
+            if indicator in dep_lower and name not in found:
+                found.append(name)
+    return found
+
+
+def stage_investigate(llm, facts, access, doc, today, progress=lambda s: None):
+    """Conditional investigation — runs ONLY the branches that prior stages triggered."""
+    investigated = []
+
+    # Branch 1: paid dependency detected → investigate pricing
+    if access.get("paid_dependency"):
+        services = _detect_paid_services(facts)
+        for service in services[:2]:
+            progress(f"Investigating pricing for {service}...")
+            res = llm.search(P_PRICING.format(service=service, today=today))
+            if res.get("text") and not res.get("error"):
+                src_url = (res.get("sources") or [{}])[0].get("url", "")
+                fid = f"F{len(facts) + 1}"
+                facts[fid] = {
+                    "id": fid, "text": f"Pricing: {service} — {res['text'][:200]}",
+                    "quote": res["text"][:150], "url": src_url,
+                    "category": "pricing", "status": "UNCHECKED",
+                    "origin": "independent", "date": None}
+                investigated.append(f"pricing:{service}")
+
+    # Branch 2: GitHub repo → parse dependency files with code (no LLM)
+    if doc["kind"] == "github":
+        meta = doc.get("meta", {})
+        owner, repo = meta.get("owner"), meta.get("repo")
+        if owner and repo:
+            progress("Parsing dependency files...")
+            deps = F.fetch_github_deps(owner, repo)
+            for filename, dep_list in deps.items():
+                if dep_list:
+                    fid = f"F{len(facts) + 1}"
+                    facts[fid] = {
+                        "id": fid,
+                        "text": f"Dependencies ({filename}): {', '.join(dep_list[:10])}",
+                        "quote": filename, "url": f"https://github.com/{owner}/{repo}",
+                        "category": "access", "status": "OBSERVED",
+                        "origin": "api", "date": None}
+                    investigated.append(f"deps:{filename}")
+            all_dep_names = [d for dl in deps.values() for d in dl]
+            paid = _check_paid_deps(all_dep_names)
+            if paid and not access.get("paid_dependency"):
+                access["paid_dependency"] = True
+                for svc in paid[:1]:
+                    progress(f"Found paid dependency: {svc}...")
+                    res = llm.search(P_PRICING.format(service=svc, today=today))
+                    if res.get("text") and not res.get("error"):
+                        src_url = (res.get("sources") or [{}])[0].get("url", "")
+                        fid = f"F{len(facts) + 1}"
+                        facts[fid] = {
+                            "id": fid, "text": f"Pricing: {svc} — {res['text'][:200]}",
+                            "quote": res["text"][:150], "url": src_url,
+                            "category": "pricing", "status": "UNCHECKED",
+                            "origin": "independent", "date": None}
+                        investigated.append(f"pricing:{svc}")
+
+    return {"investigated": investigated}
+
+
 def stage_claims(llm, facts, search_ok, origin):
     brief = [{"id": f["id"], "text": f["text"], "status": f["status"]} for f in facts.values()]
     out = llm.json(SYS_RULES, P_CLAIMS.format(facts=json.dumps(brief)))
@@ -483,11 +580,17 @@ def compute_scores(access, facts, research, today):
     }
 
 
-def stage_report(llm, facts, scores, claims):
+def stage_report(llm, facts, scores, claims, user_context=None):
     brief = [{"id": f["id"], "text": f["text"], "status": f["status"]} for f in facts.values()]
 
-    analysis = llm.json(SYS_RULES, P_ANALYSIS.format(
-        facts=json.dumps(brief), scores=json.dumps(scores), claims=json.dumps(claims)))
+    prompt = P_ANALYSIS.format(facts=json.dumps(brief), scores=json.dumps(scores),
+                               claims=json.dumps(claims))
+    if user_context:
+        prompt += (f"\n\nUser context: budget={user_context.get('budget','unknown')}, "
+                   f"experience={user_context.get('experience','unknown')}, "
+                   f"making content for={user_context.get('use_case','unknown')}. "
+                   "Tailor quick_start and bottom_line to this person's level and budget.")
+    analysis = llm.json(SYS_RULES, prompt)
 
     creative = llm.json(SYS_RULES, P_HOOKS.format(
         facts=json.dumps(brief), scores=json.dumps(scores)), temperature=0.6)
@@ -556,7 +659,8 @@ def _identify_reel_tool(llm, reel_url, caption, on_screen, progress=lambda s: No
 
 # ── orchestration ────────────────────────────────────────────────────
 
-def analyze(url, llm, caption="", on_screen="", today=None, progress=lambda s: None):
+def analyze(url, llm, caption="", on_screen="", today=None, progress=lambda s: None,
+            user_context=None):
     today = today or date.today()
     progress("Fetching the page...")
     doc = F.fetch(url, caption, on_screen)
@@ -596,12 +700,15 @@ def analyze(url, llm, caption="", on_screen="", today=None, progress=lambda s: N
 
     research = stage_research(llm, doc, fx["name"], fx["what_it_is"], facts, today, progress)
 
+    progress("Conditional investigation...")
+    investigation = stage_investigate(llm, facts, fx["access"], doc, today, progress)
+
     progress("Linking claims to evidence...")
     claims = stage_claims(llm, facts, research["search_ok"], doc["kind"])
     scores = compute_scores(fx["access"], facts, research, today)
 
     progress("Writing analysis and hooks...")
-    report = stage_report(llm, facts, scores, claims)
+    report = stage_report(llm, facts, scores, claims, user_context=user_context)
 
     acc = fx["access"]
     nums_self = sum(1 for f in facts.values()
@@ -618,6 +725,7 @@ def analyze(url, llm, caption="", on_screen="", today=None, progress=lambda s: N
     return {"state": "ok", "url": doc["url"], "kind": doc["kind"], "name": fx["name"],
             "what_it_is": fx["what_it_is"], "audience": fx["audience"], "access": acc,
             "facts": list(facts.values()), "claims": claims, "scores": scores,
-            "research": research, "report": report, "verdict": verdict, "verdict_rule": rule,
+            "research": research, "investigation": investigation,
+            "report": report, "verdict": verdict, "verdict_rule": rule,
             "dropped_facts": fx["dropped"], "models": sorted(getattr(llm, "used", [])),
             "reel_tool": reel_tool_name}

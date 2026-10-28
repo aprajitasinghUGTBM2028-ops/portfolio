@@ -8,7 +8,9 @@ Returns a dict:
 from __future__ import annotations
 
 import ipaddress
+import json as _json
 import os
+import re
 import socket
 from urllib.parse import urljoin, urlparse
 
@@ -228,6 +230,98 @@ def fetch_github(url: str) -> dict:
     pages = _budget(pages)
     return _result("github", f"https://github.com/{owner}/{repo}", title=f"{owner}/{repo}",
                    pages=pages, thin=is_thin(readme, 200), meta=meta)
+
+
+# ── Dependency file parsing (code, no LLM) ──────────────────────────
+
+def fetch_github_deps(owner: str, repo: str) -> dict:
+    """Fetch and parse dependency files from a GitHub repo. Pure Python, no LLM."""
+    deps = {}
+    files_to_try = ("requirements.txt", "package.json", "pyproject.toml", "setup.py")
+    headers = _gh_headers()
+    for filename in files_to_try:
+        for branch in ("main", "master"):
+            url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{filename}"
+            try:
+                r = _get(url, headers=headers)
+                if r.status_code == 200:
+                    parsed = _parse_dep_file(filename, r.text)
+                    if parsed:
+                        deps[filename] = parsed
+                    break
+            except FetchError:
+                continue
+    return deps
+
+
+def _parse_dep_file(filename: str, content: str) -> list:
+    if filename == "requirements.txt":
+        return _parse_requirements(content)
+    if filename == "package.json":
+        return _parse_package_json(content)
+    if filename == "pyproject.toml":
+        return _parse_pyproject(content)
+    if filename == "setup.py":
+        return _parse_setup_py(content)
+    return []
+
+
+def _parse_requirements(text: str) -> list:
+    deps = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("-"):
+            continue
+        name = re.split(r"[>=<!\[;@]", line)[0].strip()
+        if name:
+            deps.append(name)
+    return deps
+
+
+def _parse_package_json(text: str) -> list:
+    try:
+        pkg = _json.loads(text)
+    except (ValueError, _json.JSONDecodeError):
+        return []
+    deps = []
+    for key in ("dependencies", "devDependencies", "peerDependencies"):
+        deps.extend(pkg.get(key, {}).keys())
+    return deps
+
+
+def _parse_pyproject(text: str) -> list:
+    deps = []
+    in_deps = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("dependencies") and "=" in stripped:
+            in_deps = True
+            for match in re.findall(r'"([^"]+)"', stripped):
+                name = re.split(r"[>=<!\[;]", match)[0].strip()
+                if name:
+                    deps.append(name)
+            if "]" in stripped:
+                in_deps = False
+            continue
+        if in_deps:
+            if "]" in stripped:
+                in_deps = False
+            for match in re.findall(r'"([^"]+)"', stripped):
+                name = re.split(r"[>=<!\[;]", match)[0].strip()
+                if name:
+                    deps.append(name)
+    return deps
+
+
+def _parse_setup_py(text: str) -> list:
+    deps = []
+    for match in re.findall(r'install_requires\s*=\s*\[(.*?)\]', text, re.S):
+        for dep in re.findall(r'"([^"]+)"|\'([^\']+)\'', match):
+            name = (dep[0] or dep[1]).strip()
+            name = re.split(r"[>=<!\[;]", name)[0].strip()
+            if name:
+                deps.append(name)
+    return deps
 
 
 # ── Instagram: only user supplied text is trusted ────────────────────
