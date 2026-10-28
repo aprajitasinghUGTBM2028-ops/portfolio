@@ -1,4 +1,4 @@
-"""AI Hype Claim Checker — Chat Interface"""
+"""Litmus — Test the Promise"""
 import threading
 
 import streamlit as st
@@ -254,11 +254,56 @@ def _format_result(r):
 
 # ── Page config ──────────────────────────────────────────────────────
 
-st.set_page_config(page_title="AI Hype Claim Checker", page_icon="V", layout="centered")
+st.set_page_config(page_title="Litmus", page_icon=":test_tube:", layout="centered")
+
+# ── ChatGPT-inspired styling ──────────────────────────────────────
+st.markdown("""<style>
+/* Hide Streamlit chrome */
+#MainMenu, footer, header, .stDeployButton {display: none !important;}
+
+/* Dark sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #171717 !important;
+}
+section[data-testid="stSidebar"] * {
+    color: #ececec !important;
+}
+section[data-testid="stSidebar"] .stButton > button {
+    background-color: #2a2a2a !important;
+    border: 1px solid #444 !important;
+    color: #ececec !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background-color: #3a3a3a !important;
+}
+
+/* Center chat content */
+.stChatMessage {
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+.stMainBlockContainer {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding-top: 1rem;
+}
+
+/* Clean typography */
+body, .stMarkdown, .stChatMessage {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+/* Subtle chat input */
+.stChatInput textarea {
+    border-radius: 1.5rem !important;
+}
+</style>""", unsafe_allow_html=True)
 
 pw = st.secrets.get("APP_PASSWORD", "")
 if pw and not st.session_state.get("authed"):
-    st.title("AI Hype Claim Checker")
+    st.title("Litmus")
+    st.caption("Test the Promise")
     entered = st.text_input("Password", type="password")
     if entered and entered == pw:
         st.session_state["authed"] = True
@@ -269,12 +314,13 @@ if pw and not st.session_state.get("authed"):
 
 _key = _api_key()
 if not _key:
-    st.title("AI Hype Claim Checker")
+    st.title("Litmus")
+    st.caption("Test the Promise")
     st.error("OpenAI API key not configured. Add it in app secrets.")
     st.stop()
 
-st.title("AI Hype Claim Checker")
-st.caption("Paste a tool URL. I'll search Reddit, HN, X, YouTube, LinkedIn, and more to check what's real.")
+st.title("Litmus")
+st.caption("Test the Promise — paste a tool URL and I'll check what's real.")
 
 # ── Session state init ──────────────────────────────────────────────
 
@@ -330,11 +376,11 @@ with st.sidebar:
             else:
                 st.caption("Last analysis saved.")
 
-    # Saved analyses
+    # History
     st.markdown("---")
-    st.markdown("### Saved analyses")
+    st.markdown("### History")
     if not st.session_state.saved_analyses:
-        st.caption("No saved analyses yet. Run a check and click Save.")
+        st.caption("No saved checks yet.")
     for i, saved in enumerate(st.session_state.saved_analyses):
         if st.button(f"{saved['name']} — {saved['verdict']}", key=f"saved_{i}"):
             st.session_state["_view_saved"] = i
@@ -353,7 +399,7 @@ with st.sidebar:
         st.markdown("Open `~/.claude/claude_desktop_config.json` and add:")
         st.code('''{
   "mcpServers": {
-    "hype-checker": {
+    "litmus": {
       "command": "python",
       "args": ["/path/to/portfolio/claim-checker/mcp_server.py"],
       "env": {
@@ -433,7 +479,7 @@ for msg in st.session_state.messages:
 
 # ── Chat input ───────────────────────────────────────────────────────
 
-if prompt := st.chat_input("Paste a URL, or ask a follow-up about the last analysis"):
+if prompt := st.chat_input("Paste a URL to test, or ask about the last check"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)

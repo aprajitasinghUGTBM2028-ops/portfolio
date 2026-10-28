@@ -1,4 +1,4 @@
-"""MCP Server — exposes the AI Hype Claim Checker pipeline as a tool for Claude Desktop.
+"""MCP Server — exposes the Litmus pipeline as a tool for Claude Desktop.
 
 Install: pip install mcp
 Run:     python mcp_server.py
@@ -6,7 +6,7 @@ Run:     python mcp_server.py
 Claude Desktop config (~/.claude/claude_desktop_config.json):
 {
   "mcpServers": {
-    "hype-checker": {
+    "litmus": {
       "command": "python",
       "args": ["/path/to/mcp_server.py"],
       "env": {"OPENAI_API_KEY": "sk-..."}
@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import analyzer
 import checks as C
 
-mcp = FastMCP("AI Hype Claim Checker",
-              instructions="Fact-checks AI tool claims using code-verified evidence.")
+mcp = FastMCP("Litmus",
+              instructions="Test the promise — fact-checks AI tool claims using code-verified evidence.")
 
 
 @mcp.tool()
